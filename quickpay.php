@@ -1008,7 +1008,6 @@ class QuickPay extends PaymentModule
 					'product_id'                   => 'P03',
 					'reference_title'              => Configuration::get('PS_SHOP_NAME'),
 					'subscription'                 => '',
-					'testmode'                     => $setup->testmode,
 					'vat_amount'                   => $tax_total,
 					'version'                      => 'v10'
 						);
