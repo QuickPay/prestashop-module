@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2015/06/03 19:37:07 $
+ *  $Date: 2015/06/26 19:11:43 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -33,7 +33,11 @@ if (!Validate::isLoadedObject($order) ||
 		$order->id_customer != $id_customer)
 	Tools::redirect('history.php');
 
-Tools::redirect('order-confirmation.php?id_cart='.$id_cart.
-		'&id_module='.$id_module.'&id_order='.$id_order.'&key='.$key);
+if (_PS_VERSION_ >= '1.5.0.0')
+	Tools::redirect('index.php?controller=order-confirmation&id_cart='.$id_cart.
+			'&id_module='.$id_module.'&id_order='.$id_order.'&key='.$key);
+else
+	Tools::redirect('order-confirmation.php?id_cart='.$id_cart.
+			'&id_module='.$id_module.'&id_order='.$id_order.'&key='.$key);
 
 ?>
