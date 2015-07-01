@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/06/03 19:37:07 $
+*  $Date: 2015/07/01 06:56:46 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -22,7 +22,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.11d';
+		$this->version = '4.0.12a';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -123,7 +123,6 @@ class QuickPay extends PaymentModule
 				array('_QUICKPAY_PRIVATE_KEY', 'private_key', $this->l('Quickpay private key'), '', ''),
 				array('_QUICKPAY_USER_KEY', 'user_key', $this->l('Quickpay user key'), '', ''),
 				array('_QUICKPAY_ORDER_PREFIX', 'orderprefix', $this->l('Order prefix'), '000', ''),
-				array('_QUICKPAY_TESTMODE', 'testmode', $this->l('Enable test mode'), 0, ''),
 				array('_QUICKPAY_COMBINE', 'combine', $this->l('Creditcards combined window'), 0, ''),
 				array('_QUICKPAY_AUTOFEE', 'autofee', $this->l('Customer pays the card fee'), 0, ''),
 				array('_QUICKPAY_API', 'api', $this->l('Activate API'), 1, ''),
@@ -320,10 +319,12 @@ class QuickPay extends PaymentModule
 				"'._DB_PREFIX_.'quickpay_execution"');
 		if (!$row) // Not installed properly
 			$this->install();
-		if (!$this->isRegisteredInHook(Hook::getIdByName('paymentTop')))
-			$this->registerHook('paymentTop');
 		if ($this->v15)
+		{
+			if (!$this->isRegisteredInHook(Hook::getIdByName('paymentTop')))
+				$this->registerHook('paymentTop');
 			$this->context->controller->addJqueryUI('ui.sortable');
+		}
 		else
 		{
 			// Old PrestaShop
@@ -1101,6 +1102,8 @@ class QuickPay extends PaymentModule
 		if (empty($this->setup_vars))
 			$this->getSetup();
 		$brand = $vars->metadata->brand;
+		if (!$brand)
+			$brand = $vars->acquirer;
 		foreach ($this->setup_vars as $setup_var)
 		{
 			$vars = $this->varsObj($setup_var);
@@ -1321,8 +1324,16 @@ class QuickPay extends PaymentModule
 					$html .= $this->l('Captured');
 					break;
 				case 'authorize':
-					$resttocap += $operation->amount / 100;
-					$html .= $this->l('Authorized');
+					if ($operation->aq_status_code == 202)
+					{
+						$resttocap = 0;
+						$html .= $this->l('Waiting for approval');
+					}
+					else
+					{
+						$resttocap += $operation->amount / 100;
+						$html .= $this->l('Authorized');
+					}
 					break;
 				case 'refund':
 					$resttoref -= $operation->amount / 100;
@@ -1333,6 +1344,10 @@ class QuickPay extends PaymentModule
 					$resttocap = 0;
 					$allowcancel = false;
 					$html .= $this->l('Cancelled');
+					break;
+				case 'session':
+					$resttocap += $operation->amount / 100;
+					$html .= $this->l('Pending');
 					break;
 				default:
 					$html .= $operation->type;
