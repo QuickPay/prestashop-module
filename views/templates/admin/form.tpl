@@ -1,6 +1,6 @@
 {*
 * NOTICE OF LICENSE
-* $Date: 2015/05/07 07:04:23 $
+* $Date: 2015/07/01 05:49:14 $
 * Written by Kjeld Borch Egevang (based on 1.5 form.tpl)
 * E-mail: helpdesk@quickpay.net
 *}
@@ -10,9 +10,9 @@
 	<div class="leadin">{block name="leadin"}{/block}</div>
 {/if}
 
-{if isset($fields.title)}<h2>{$fields.title}</h2>{/if}
+{if isset($fields.title)}<h2>{$fields.title|escape:'htmlall':'UTF-8'}</h2>{/if}
 {block name="defaultForm"}
-<form id="{$table}_form" class="defaultForm {$name_controller}" action="{$current}&{if !empty($submit_action)}{$submit_action}=1{/if}&token={$token}" method="post" enctype="multipart/form-data" {if isset($style)}style="{$style}"{/if}>
+<form id="{$table|escape:'htmlall':'UTF-8'}_form" class="defaultForm {$name_controller|escape:'htmlall':'UTF-8'}" action="{$current|escape:'htmlall':'UTF-8'}&{if !empty($submit_action)}{$submit_action|escape:'htmlall':'UTF-8'}=1{/if}&token={$token|escape:'htmlall':'UTF-8'}" method="post" enctype="multipart/form-data" {if isset($style)}style="{$style|escape:'htmlall':'UTF-8'}"{/if}>
 	{if $form_id}
 		<input type="hidden" name="{$identifier|escape:'htmlall':'UTF-8'}" id="{$identifier|escape:'htmlall':'UTF-8'}" value="{$form_id|escape:'htmlall':'UTF-8'}" />
 	{/if}
@@ -35,7 +35,7 @@
 								<div id="contains_states" {if $contains_states}style="display:none;"{/if}>
 							{/if}
 							{block name="label"}
-								{if isset($input.label)}<label>{$input.label} </label>{/if}
+								{if isset($input.label)}<label>{$input.label|escape:'htmlall':'UTF-8'} </label>{/if}
 							{/block}
 							{block name="field"}
 								<div class="margin-form">
@@ -44,14 +44,14 @@
 									{if isset($input.lang) AND $input.lang}
 										<div class="translatable">
 											{foreach $languages as $language}
-												<div class="lang_{$language.id_lang}" style="display:{if $language.id_lang == $defaultFormLanguage}block{else}none{/if}; float: left;">
+												<div class="lang_{$language.id_lang|escape:'htmlall':'UTF-8'}" style="display:{if $language.id_lang == $defaultFormLanguage}block{else}none{/if}; float: left;">
 													{if $input.type == 'tags'}
 														{literal}
 														<script type="text/javascript">
 															$().ready(function () {
-																var input_id = '{/literal}{if isset($input.id)}{$input.id}_{$language.id_lang}{else}{$input.name}_{$language.id_lang}{/if}{literal}';
+																var input_id = '{/literal}{if isset($input.id)}{$input.id|escape:'htmlall':'UTF-8'}_{$language.id_lang|escape:'htmlall':'UTF-8'}{else}{$input.name|escape:'htmlall':'UTF-8'}_{$language.id_lang|escape:'htmlall':'UTF-8'}{/if}{literal}';
 																$('#'+input_id).tagify({addTagPrompt: '{/literal}{l s='Add tag' js=1}{literal}'});
-																$({/literal}'#{$table}{literal}_form').submit( function() {
+																$({/literal}'#{$table|escape:'htmlall':'UTF-8'}{literal}_form').submit( function() {
 																	$(this).find('#'+input_id).val($('#'+input_id).tagify('serialize'));
 																});
 															});
@@ -61,15 +61,15 @@
 													{assign var='value_text' value=$fields_value[$input.name][$language.id_lang]}
 													<input type="text"
 															name="{$input.name|escape:'htmlall':'UTF-8'}_{$language.id_lang|escape:'htmlall':'UTF-8'}"
-															id="{if isset($input.id)}{$input.id}_{$language.id_lang}{else}{$input.name}_{$language.id_lang}{/if}"
+															id="{if isset($input.id)}{$input.id|escape:'htmlall':'UTF-8'}_{$language.id_lang|escape:'htmlall':'UTF-8'}{else}{$input.name|escape:'htmlall':'UTF-8'}_{$language.id_lang|escape:'htmlall':'UTF-8'}{/if}"
 															value="{if isset($input.string_format) && $input.string_format}{$value_text|string_format:$input.string_format|escape:'htmlall':'UTF-8'}{else}{$value_text|escape:'htmlall':'UTF-8'}{/if}"
-															class="{if $input.type == 'tags'}tagify {/if}{if isset($input.class)}{$input.class}{/if}"
-															{if isset($input.size)}size="{$input.size}"{/if}
-															{if isset($input.maxlength)}maxlength="{$input.maxlength}"{/if}
+															class="{if $input.type == 'tags'}tagify {/if}{if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}"
+															{if isset($input.size)}size="{$input.size|escape:'htmlall':'UTF-8'}"{/if}
+															{if isset($input.maxlength)}maxlength="{$input.maxlength|escape:'htmlall':'UTF-8'}"{/if}
 															{if isset($input.readonly) && $input.readonly}readonly="readonly"{/if}
 															{if isset($input.disabled) && $input.disabled}disabled="disabled"{/if}
 															{if isset($input.autocomplete) && !$input.autocomplete}autocomplete="off"{/if} />
-													{if !empty($input.hint)}<span class="hint" name="help_box">{$input.hint}<span class="hint-pointer">&nbsp;</span></span>{/if}
+													{if !empty($input.hint)}<span class="hint" name="help_box">{$input.hint|escape:'htmlall':'UTF-8'}<span class="hint-pointer">&nbsp;</span></span>{/if}
 												</div>
 											{/foreach}
 										</div>
@@ -78,10 +78,10 @@
 											{literal}
 											<script type="text/javascript">
 												$().ready(function () {
-													var input_id = '{/literal}{if isset($input.id)}{$input.id}{else}{$input.name}{/if}{literal}';
+													var input_id = '{/literal}{if isset($input.id)}{$input.id|escape:'htmlall':'UTF-8'}{else}{$input.name|escape:'htmlall':'UTF-8'}{/if}{literal}';
 													$('#'+input_id).tagify();
 													$('#'+input_id).tagify({addTagPrompt: '{/literal}{l s='Add tag' mod='quickpay'}{literal}'});
-													$({/literal}'#{$table}{literal}_form').submit( function() {
+													$({/literal}'#{$table|escape:'htmlall':'UTF-8'}{literal}_form').submit( function() {
 														$(this).find('#'+input_id).val($('#'+input_id).tagify('serialize'));
 													});
 												});
@@ -91,17 +91,17 @@
 										{assign var='value_text' value=$fields_value[$input.name]}
 										<input type="text"
 												name="{$input.name|escape:'htmlall':'UTF-8'}"
-												id="{if isset($input.id)}{$input.id}{else}{$input.name}{/if}"
+												id="{if isset($input.id)}{$input.id|escape:'htmlall':'UTF-8'}{else}{$input.name|escape:'htmlall':'UTF-8'}{/if}"
 												value="{if isset($input.string_format) && $input.string_format}{$value_text|string_format:$input.string_format|escape:'htmlall':'UTF-8'}{else}{$value_text|escape:'htmlall':'UTF-8'}{/if}"
-												class="{if $input.type == 'tags'}tagify {/if}{if isset($input.class)}{$input.class}{/if}"
-												{if isset($input.size)}size="{$input.size}"{/if}
-												{if isset($input.maxlength)}maxlength="{$input.maxlength}"{/if}
-												{if isset($input.class)}class="{$input.class}"{/if}
+												class="{if $input.type == 'tags'}tagify {/if}{if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}"
+												{if isset($input.size)}size="{$input.size|escape:'htmlall':'UTF-8'}"{/if}
+												{if isset($input.maxlength)}maxlength="{$input.maxlength|escape:'htmlall':'UTF-8'}"{/if}
+												{if isset($input.class)}class="{$input.class|escape:'htmlall':'UTF-8'}"{/if}
 												{if isset($input.readonly) && $input.readonly}readonly="readonly"{/if}
 												{if isset($input.disabled) && $input.disabled}disabled="disabled"{/if}
 												{if isset($input.autocomplete) && !$input.autocomplete}autocomplete="off"{/if} />
-										{if isset($input.suffix)}{$input.suffix}{/if}
-										{if !empty($input.hint)}<span class="hint" name="help_box">{$input.hint}<span class="hint-pointer">&nbsp;</span></span>{/if}
+										{if isset($input.suffix)}{$input.suffix|escape:'htmlall':'UTF-8'}{/if}
+										{if !empty($input.hint)}<span class="hint" name="help_box">{$input.hint|escape:'htmlall':'UTF-8'}<span class="hint-pointer">&nbsp;</span></span>{/if}
 									{/if}
 								{elseif $input.type == 'select'}
 									{if isset($input.options.query) && !$input.options.query && isset($input.empty_message)}
@@ -109,11 +109,11 @@
 										{$input.required = false}
 										{$input.desc = null}
 									{else}
-										<select name="{$input.name}" class="{if isset($input.class)}{$input.class}{/if}"
-												id="{if isset($input.id)}{$input.id}{else}{$input.name}{/if}"
+										<select name="{$input.name|escape:'htmlall':'UTF-8'}" class="{if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}"
+												id="{if isset($input.id)}{$input.id|escape:'htmlall':'UTF-8'}{else}{$input.name|escape:'htmlall':'UTF-8'}{/if}"
 												{if isset($input.multiple)}multiple="multiple" {/if}
-												{if isset($input.size)}size="{$input.size}"{/if}
-												{if isset($input.onchange)}onchange="{$input.onchange}"{/if}>
+												{if isset($input.size)}size="{$input.size|escape:'htmlall':'UTF-8'}"{/if}
+												{if isset($input.onchange)}onchange="{$input.onchange|escape:'htmlall':'UTF-8'}"{/if}>
 											{if isset($input.options.default)}
 												<option value="{$input.options.default.value|escape:'htmlall':'UTF-8'}">{$input.options.default.label|escape:'htmlall':'UTF-8'}</option>
 											{/if}
@@ -168,14 +168,14 @@
 												{/foreach}
 											{/if}
 										</select>
-										{if !empty($input.hint)}<span class="hint" name="help_box">{$input.hint}<span class="hint-pointer">&nbsp;</span></span>{/if}
+										{if !empty($input.hint)}<span class="hint" name="help_box">{$input.hint|escape:'htmlall':'UTF-8'}<span class="hint-pointer">&nbsp;</span></span>{/if}
 									{/if}
 								{elseif $input.type == 'radio'}
 									{foreach $input.values as $value}
 										<input type="radio"	name="{$input.name}"id="{$value.id}" value="{$value.value|escape:'htmlall':'UTF-8'}"
 												{if $fields_value[$input.name] == $value.value}checked="checked"{/if}
 												{if isset($input.disabled) && $input.disabled}disabled="disabled"{/if} />
-										<label {if isset($input.class)}class="{$input.class}"{/if} for="{$value.id}">
+										<label {if isset($input.class)}class="{$input.class|escape:'htmlall':'UTF-8'}"{/if} for="{$value.id|escape:'htmlall':'UTF-8'}">
 										 {if isset($input.is_bool) && $input.is_bool == true}
 											{if $value.value == 1}
 												<img src="../img/admin/enabled.gif" alt="{$value.label|escape:'htmlall':'UTF-8'}" title="{$value.label|escape:'htmlall':'UTF-8'}" />
@@ -187,13 +187,13 @@
 										 {/if}
 										</label>
 										{if isset($input.br) && $input.br}<br />{/if}
-										{if isset($value.p) && $value.p}<p>{$value.p}</p>{/if}
+										{if isset($value.p) && $value.p}<p>{$value.p|escape:'htmlall':'UTF-8'}</p>{/if}
 									{/foreach}
 								{elseif $input.type == 'textarea'}
 									{if isset($input.lang) AND $input.lang}
 										<div class="translatable">
 											{foreach $languages as $language}
-												<div class="lang_{$language.id_lang}" id="{$input.name}_{$language.id_lang}" style="display:{if $language.id_lang == $defaultFormLanguage}block{else}none{/if}; float: left;">
+												<div class="lang_{$language.id_lang|escape:'htmlall':'UTF-8'}" id="{$input.name|escape:'htmlall':'UTF-8'}_{$language.id_lang|escape:'htmlall':'UTF-8'}" style="display:{if $language.id_lang == $defaultFormLanguage}block{else}none{/if}; float: left;">
 													<textarea cols="{$input.cols}" rows="{$input.rows}" name="{$input.name}_{$language.id_lang}" {if isset($input.autoload_rte) && $input.autoload_rte}class="rte autoload_rte {if isset($input.class)}{$input.class}{/if}"{/if} >{$fields_value[$input.name][$language.id_lang]|escape:'htmlall':'UTF-8'}</textarea>
 												</div>
 											{/foreach}
@@ -207,7 +207,7 @@
 										<input type="checkbox"
 											name="{$id_checkbox|escape:'htmlall':'UTF-8'}"
 											id="{$id_checkbox|escape:'htmlall':'UTF-8'}"
-											class="{if isset($input.class)}{$input.class}{/if}"
+											class="{if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}"
 											{if isset($value.val)}value="{$value.val|escape:'htmlall':'UTF-8'}"{/if}
 											{if isset($fields_value[$id_checkbox]) && $fields_value[$id_checkbox]}checked="checked"{/if} />
 										<label for="{$id_checkbox|escape:'htmlall':'UTF-8'}" class="t"><strong>{$value[$input.values.name]|escape:'htmlall':'UTF-8'}</strong></label><br />
@@ -224,26 +224,26 @@
 											</div><br />
 										{/if}
 									{/if}
-									<input type="file" name="{$input.name}" {if isset($input.id)}id="{$input.id}"{/if} />
-									{if !empty($input.hint)}<span class="hint" name="help_box">{$input.hint}<span class="hint-pointer">&nbsp;</span></span>{/if}
+									<input type="file" name="{$input.name|escape:'htmlall':'UTF-8'}" {if isset($input.id)}id="{$input.id|escape:'htmlall':'UTF-8'}"{/if} />
+									{if !empty($input.hint)}<span class="hint" name="help_box">{$input.hint|escape:'htmlall':'UTF-8'}<span class="hint-pointer">&nbsp;</span></span>{/if}
 								{elseif $input.type == 'password'}
 									<input type="password"
 											name="{$input.name|escape:'htmlall':'UTF-8'}"
 											size="{$input.size|escape:'htmlall':'UTF-8'}"
-											class="{if isset($input.class)}{$input.class}{/if}"
+											class="{if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}"
 											value=""
 											{if isset($input.autocomplete) && !$input.autocomplete}autocomplete="off"{/if} />
 								{elseif $input.type == 'birthday'}
 									{foreach $input.options as $key => $select}
-										<select name="{$key}" class="{if isset($input.class)}{$input.class}{/if}">
+										<select name="{$key|escape:'htmlall':'UTF-8'}" class="{if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}">
 											<option value="">-</option>
 											{if $key == 'months'}
 												{foreach $select as $k => $v}
-													<option value="{$k}" {if $k == $fields_value[$key]}selected="selected"{/if}>{l s=$v mod='quickpay'}</option>
+													<option value="{$k|escape:'htmlall':'UTF-8'}" {if $k == $fields_value[$key]}selected="selected"{/if}>{l s=$v mod='quickpay'}</option>
 												{/foreach}
 											{else}
 												{foreach $select as $v}
-													<option value="{$v}" {if $v == $fields_value[$key]}selected="selected"{/if}>{$v}</option>
+													<option value="{$v|escape:'htmlall':'UTF-8'}" {if $v == $fields_value[$key]}selected="selected"{/if}>{$v|escape:'htmlall':'UTF-8'}</option>
 												{/foreach}
 											{/if}
 
@@ -267,7 +267,7 @@
 										{if isset($input.class)}class="{$input.class}"
 										{else}class="color mColorPickerInput"{/if}
 										name="{$input.name|escape:'htmlall':'UTF-8'}"
-										class="{if isset($input.class)}{$input.class}{/if}"
+										class="{if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}"
 										value="{$fields_value[$input.name]|escape:'htmlall':'UTF-8'}" />
 								{elseif $input.type == 'date'}
 									<input type="text"
@@ -321,10 +321,10 @@
 				{elseif $key == 'submit'}
 					<div class="margin-form">
 						<input type="submit"
-							id="{if isset($field.id)}{$field.id}{else}{$table}_form_submit_btn{/if}"
+							id="{if isset($field.id)}{$field.id|escape:'htmlall':'UTF-8'}{else}{$table|escape:'htmlall':'UTF-8'}_form_submit_btn{/if}"
 							value="{$field.title|escape:'htmlall':'UTF-8'}"
-							name="{if isset($field.name)}{$field.name}{else}{$submit_action}{/if}{if isset($field.stay) && $field.stay}AndStay{/if}"
-							{if isset($field.class)}class="{$field.class}"{/if} />
+							name="{if isset($field.name)}{$field.name|escape:'htmlall':'UTF-8'}{else}{$submit_action|escape:'htmlall':'UTF-8'}{/if}{if isset($field.stay) && $field.stay}AndStay{/if}"
+							{if isset($field.class)}class="{$field.class|escape:'htmlall':'UTF-8'}"{/if} />
 					</div>
 				{elseif $key == 'desc'}
 					<p class="clear">
