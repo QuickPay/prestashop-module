@@ -6,12 +6,16 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/07/02 08:17:44 $
+*  $Date: 2015/07/05 05:29:50 $
 *  E-mail: helpdesk@quickpay.net
 */
 
 if (!defined('_PS_VERSION_'))
 	exit;
+
+if (stream_resolve_include_path(_PS_MODULE_DIR_.'quickpay/quickpay.inc.php'))
+	include(_PS_MODULE_DIR_.'quickpay/quickpay.inc.php');
+
 
 class QuickPay extends PaymentModule
 {
@@ -22,7 +26,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.14';
+		$this->version = '4.0.14a';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -654,8 +658,6 @@ class QuickPay extends PaymentModule
 				$this->post_errors[] = $this->l('Agreement ID is required.');
 			if (!$setup->api_key)
 				$this->post_errors[] = $this->l('API key is required.');
-			if ($setup->autofee && $this->getFees(100) === false)
-				$this->post_errors[] = $this->l('User name/password not valid.');
 			if (Tools::strlen($setup->orderprefix) != 3)
 				$this->post_errors[] =
 					$this->l('Order prefix must be exactly 3 characters long.');
@@ -670,14 +672,13 @@ class QuickPay extends PaymentModule
 			return call_user_func('json_decode', $data);
 	}
 
-	public function doCurl($resource, $fields = null, $post_flag = false)
+	public function getCurlHandle($resource, $fields = null, $post_flag = false)
 	{
-		if (!function_exists('curl_init'))
-			return false;
+		$key = 'b53c5f7a216546bde06dac81faa5b7099939ebb41358fd6296b0139dea2b311f';
 		$ch = curl_init();
 		$header = array();
 		$header[] = 'Authorization: Basic '.
-			call_user_func('base64_encode', ':'.$this->setup->user_key);
+			call_user_func('base64_encode', ':'.$key);
 		$header[] = 'Accept-Version: v10';
 		$url = 'https://api.quickpay.net/'.$resource;
 		curl_setopt($ch, CURLOPT_URL, $url);
@@ -692,8 +693,13 @@ class QuickPay extends PaymentModule
 			curl_setopt($ch, CURLOPT_POST, count($fields));
 			curl_setopt($ch, CURLOPT_POSTFIELDS, implode('&', $fields));
 		}
+		return $ch;
+	}
+
+	public function doCurl($resource, $fields = null, $post_flag = false)
+	{
+		$ch = $this->getCurlHandle($resource, $fields, $post_flag);
 		$data = curl_exec($ch);
-		$this->curl_error = curl_error($ch);
 		curl_close($ch);
 		return $data;
 	}
@@ -701,47 +707,66 @@ class QuickPay extends PaymentModule
 	public function getFees($amount)
 	{
 		$setup = $this->setup;
+		$data = $this->doCurl('fees/formulas');
+		$vars = $this->jsonDecode($data);
 		$fields = array('amount='.$amount);
-		$data = $this->doCurl('fees', $fields);
-		$this->dump($data);
-
-		$fees = array();
-		if ($data)
+		$chs = array();
+		$mh = curl_multi_init();
+		// curl_multi_setopt($mh, CURLMOPT_PIPELINING, 1);
+		foreach ($vars as $var)
 		{
-			$rows = $this->jsonDecode($data);
-			if (count($rows))
+			$url = 'fees/'.$var->acquirer.'/'.$var->payment_method;
+			$ch = $this->getCurlHandle($url, $fields);
+			curl_multi_add_handle($mh, $ch);
+			$chs[$var->acquirer][$var->payment_method] = $ch;
+		}
+		while (true)
+		{
+			curl_multi_exec($mh, $running);
+			curl_multi_select($mh);
+			if ($running == 0)
+				break;
+		}
+		$fees = array();
+		foreach ($vars as $var)
+		{
+			$ch = $chs[$var->acquirer][$var->payment_method];
+			curl_multi_remove_handle($mh, $ch);
+			$data = curl_multi_getcontent($ch);
+			$row = $this->jsonDecode($data);
+			if (empty($row->payment_method))
+				continue;
+			if (isset($setup->lock_names[$row->payment_method]))
 			{
-				foreach ($rows as $row)
+				$lock_name = $setup->lock_names[$row->payment_method];
+				if (isset($fees[$lock_name]))
 				{
-					if (isset($setup->lock_names[$row->lockname]))
+					if ($row->fee < $fees[$lock_name])
 					{
-						$lock_names = $setup->lock_names[$row->lockname];
-						if (isset($fees[$lock_names]))
-						{
-							if ($row->fee < $fees[$lock_names])
-							{
-								$fees[$lock_names.'_f'] = $fees[$lock_names];
-								$fees[$lock_names.'_3d_f'] = $fees[$lock_names.'_3d'];
-								$fees[$lock_names] = $row->fee;
-								$fees[$lock_names.'_3d'] = $row->fee;
-							}
-							if ($row->fee > $fees[$lock_names])
-							{
-								$fees[$lock_names.'_f'] = $row->fee;
-								$fees[$lock_names.'_3d_f'] = $row->fee;
-							}
-						}
-						else
-						{
-							$fees[$lock_names] = $row->fee;
-							$fees[$lock_names.'_3d'] = $row->fee;
-						}
+						/*
+						$fees[$lock_name.'_f'] = $fees[$lock_name];
+						$fees[$lock_name.'_3d_f'] = $fees[$lock_name.'_3d'];
+						*/
+						$fees[$lock_name] = $row->fee;
+						$fees[$lock_name.'_3d'] = $row->fee;
 					}
+					/*
+					if ($row->fee > $fees[$lock_name])
+					{
+						$fees[$lock_name.'_f'] = $row->fee;
+						$fees[$lock_name.'_3d_f'] = $row->fee;
+					}
+					*/
 				}
-				return $fees;
+				else
+				{
+					$fees[$lock_name] = $row->fee;
+					$fees[$lock_name.'_3d'] = $row->fee;
+				}
 			}
 		}
-		return false;
+		curl_multi_close($mh);
+		return $fees;
 	}
 
 	public function getBrandings()
@@ -838,8 +863,10 @@ class QuickPay extends PaymentModule
 		$tax_total = $cart_total - $cart_total_no_vat;
 		if ($this->v15)
 		{
+			if (!defined('QUICKPAY_COMPLETE'))
+				define('QUICKPAY_COMPLETE', 'complete');
 			$continueurl = $this->context->link->getModuleLink('quickpay',
-					'complete', array('key' => $customer->secure_key,
+					QUICKPAY_COMPLETE, array('key' => $customer->secure_key,
 						'id_cart' => (int)$cart->id, 'id_module' => (int)$this->id), true);
 			$cancelurl = $this->context->link->getPageLink('order',
 					true, null, 'step=3');
@@ -963,10 +990,10 @@ class QuickPay extends PaymentModule
 						$fee_text = array();
 						if ($card_name == 'viabill')
 							$fee_text['name'] = $this->l('Fee for').
-								' '.$this->l('ViaBill').':&nbsp;';
+								' '.$this->l('ViaBill').":\xC2\xA0";
 						else
 							$fee_text['name'] = $this->l('Fee for').
-								' '.$setup->card_texts[$card_name].':&nbsp;';
+								' '.$setup->card_texts[$card_name].":\xC2\xA0";
 						$fee_text['amount'] =
 							Tools::displayPrice($fees[$card_name] / 100, $currency);
 						if (!empty($fees[$card_name.'_f']))
@@ -978,7 +1005,7 @@ class QuickPay extends PaymentModule
 						{
 							$fee_texts = array();
 							$fee_text['name'] = $this->l('Fee for').
-								' '.$this->l('Visadankort').':&nbsp;';
+								' '.$this->l('Visadankort').":\xC2\xA0";
 							$fee_text['amount'] =
 								Tools::displayPrice($fees[$card_name] / 100, $currency);
 							$fee_texts[] = $fee_text;
@@ -1560,15 +1587,67 @@ class QuickPay extends PaymentModule
 			$amount = number_format($vars->operations[0]->amount / 100, 2, '.', '');
 			$extra_vars = array('transaction_id' => $vars->id,
 					'cardtype' => $vars->metadata->brand);
-			/*
-				 if ($fee > 0)
-				 $quickpay->addFee($cart, $fee);
-			 */
+			if ($this->setup->autofee && isset($vars->operations))
+				$this->addFee($cart, $amount);
 			if (!$this->validateOrder($cart->id, _PS_OS_PAYMENT_, $amount,
 						$brand, null, $extra_vars, null, false,
 						$cart->secure_key))
 				die('Prestashop error - unable to process order..');
 		}
+	}
+
+	public function addFee(&$cart, $amount)
+	{
+		$def_lang = (int)Configuration::get('PS_LANG_DEFAULT');
+		$txt = $this->l('Credit card fee', $this->name, $def_lang);
+		$row = Db::getInstance()->getRow('SELECT `id_product`
+				FROM '._DB_PREFIX_.'product
+				LEFT JOIN '._DB_PREFIX_.'product_lang
+				USING (`id_product`)
+				WHERE `name` = "'.$txt.'"');
+		if ($row)
+		{
+			$product = new Product($row['id_product']);
+			$cart->deleteProduct($row['id_product']);
+		}
+		else
+			$product = new Product();
+		$fee = $amount - $cart->getOrderTotal(true);
+		if ($fee <= 0)
+			return;
+		$product->name = array($def_lang => $txt);
+		$product->price = $fee;
+		$product->quantity = 100;
+		$product->link_rewrite = array($def_lang => 'fee');
+		$product->reference = $this->l('cardfee');
+		$currency = new Currency((int)$cart->id_currency);
+		if ($currency->conversion_rate)
+			$product->price /= $currency->conversion_rate;
+		if ($this->v15)
+			$product->is_virtual = 1;
+		if ($this->v14)
+			$product->id_tax_rules_group = 0;
+		else
+			$product->id_tax = 0;
+		if ($row)
+			$product->update();
+		else
+			$product->add();
+		if ($this->v15)
+		{
+			$rows = Group::getGroups($cart->id_lang);
+			foreach ($rows as $row)
+			{
+				Db::getInstance()->execute('
+						INSERT IGNORE INTO `'._DB_PREFIX_.'product_group_reduction_cache`
+						(`id_product`, `id_group`, `reduction`)
+						VALUES ('.(int)$product->id.', '.$row['id_group'].', 0)');
+			}
+			StockAvailable::setQuantity($product->id, 0, 100);
+		}
+		$cart->updateQty(1, $product->id);
+		if ($this->v15)
+			$cart->getPackageList(true); // Flush cache
 	}
 }
 
