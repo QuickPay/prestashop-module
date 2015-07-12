@@ -6,14 +6,14 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2015/07/02 08:10:58 $
+ *  $Date: 2015/07/05 05:30:03 $
  *  E-mail: helpdesk@quickpay.net
  */
 
 /**
  * @since 1.5.0
  */
-class QuickPayCompleteModuleFrontController extends ModuleFrontController
+class QuickPayCompleteUnsafeModuleFrontController extends ModuleFrontController
 {
 	public function initContent()
 	{
