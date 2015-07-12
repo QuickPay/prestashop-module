@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/07/05 05:29:50 $
+*  $Date: 2015/07/12 23:18:27 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -26,7 +26,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.14a';
+		$this->version = '4.0.14b';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -1179,6 +1179,7 @@ class QuickPay extends PaymentModule
 			return '';
 
 		$order = new Order((int)$params['id_order']);
+		$currency = new Currency((int)$order->id_currency);
 		$amountex = explode('.', $order->total_paid);
 		$amount = $amountex[0].$amountex[1];
 		$trans = Db::getInstance()->getRow('SELECT *
@@ -1383,7 +1384,7 @@ class QuickPay extends PaymentModule
 			if ($operation->qp_status_code != '20000')
 				$html .= ' ['.$this->l('Not approved!').']';
 			$html .= '</td><td style="text-align:right">';
-			$html .= ' '.Tools::displayPrice($operation->amount / 100);
+			$html .= ' '.Tools::displayPrice($operation->amount / 100, $currency);
 			$html .= '</td></tr>';
 		}
 		if ($resttocap < 0)
