@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/07/12 23:18:27 $
+*  $Date: 2015/07/13 08:55:57 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -26,7 +26,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.14b';
+		$this->version = '4.0.14c';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -674,11 +674,10 @@ class QuickPay extends PaymentModule
 
 	public function getCurlHandle($resource, $fields = null, $post_flag = false)
 	{
-		$key = 'b53c5f7a216546bde06dac81faa5b7099939ebb41358fd6296b0139dea2b311f';
 		$ch = curl_init();
 		$header = array();
 		$header[] = 'Authorization: Basic '.
-			call_user_func('base64_encode', ':'.$key);
+			call_user_func('base64_encode', ':'.$this->setup->user_key);
 		$header[] = 'Accept-Version: v10';
 		$url = 'https://api.quickpay.net/'.$resource;
 		curl_setopt($ch, CURLOPT_URL, $url);
