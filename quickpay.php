@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/07/13 08:55:57 $
+*  $Date: 2015/07/14 22:27:46 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -26,7 +26,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.14c';
+		$this->version = '4.0.15';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
