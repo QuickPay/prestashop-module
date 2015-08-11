@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/07/14 22:27:46 $
+*  $Date: 2015/08/10 21:11:11 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -26,7 +26,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.15';
+		$this->version = '4.0.15a';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -206,7 +206,7 @@ class QuickPay extends PaymentModule
 			$this->setup->card_texts[$vars->var_name] = $vars->card_text;
 			if (in_array($vars->var_name, $credit_cards) && $this->setup->$field)
 				$this->setup->credit_cards[$vars->var_name] = $vars->card_text;
-			if (isset($credit_cards3d[$vars->var_name]))
+			if (isset($credit_cards3d[$vars->var_name]) && $this->setup->$field)
 			{
 				$this->setup->credit_cards3d[$vars->var_name] = $vars->card_text;
 				if (isset($credit_cards2d[$vars->var_name]))
@@ -984,6 +984,9 @@ class QuickPay extends PaymentModule
 			{
 				foreach ($card_list as $card_name)
 				{
+					if ($setup->combine &&
+							($card_name == 'visa_3d' || $card_name == 'mastercard_3d'))
+						continue;
 					if (!empty($fees[$card_name]))
 					{
 						$fee_text = array();
