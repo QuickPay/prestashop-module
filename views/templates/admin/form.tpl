@@ -1,6 +1,6 @@
 {*
 * NOTICE OF LICENSE
-* $Date: 2015/07/01 05:49:14 $
+* $Date: 2015/08/12 19:40:20 $
 * Written by Kjeld Borch Egevang (based on 1.5 form.tpl)
 * E-mail: helpdesk@quickpay.net
 *}
@@ -21,7 +21,7 @@
 			{foreach $fieldset.form as $key => $field}
 				{if $key == 'legend'}
 					<legend>
-						{if isset($field.image)}<img src="{$field.image}" alt="{$field.title|escape:'htmlall':'UTF-8'}" />{/if}
+						{if isset($field.image)}<img src="{$field.image|escape:'htmlall':'UTF-8'}" alt="{$field.title|escape:'htmlall':'UTF-8'}" />{/if}
 						{$field.title|escape:'htmlall':'UTF-8'}
 					</legend>
 				{elseif $key == 'description' && $field}
@@ -29,7 +29,7 @@
 				{elseif $key == 'input'}
 					{foreach $field as $input}
 						{if $input.type == 'hidden'}
-							<input type="hidden" name="{$input.name}" id="{$input.name}" value="{$fields_value[$input.name]|escape:'htmlall':'UTF-8'}" />
+							<input type="hidden" name="{$input.name|escape:'htmlall':'UTF-8'}" id="{$input.name|escape:'htmlall':'UTF-8'}" value="{$fields_value[$input.name]|escape:'htmlall':'UTF-8'}" />
 						{else}
 							{if $input.name == 'id_state'}
 								<div id="contains_states" {if $contains_states}style="display:none;"{/if}>
@@ -172,7 +172,7 @@
 									{/if}
 								{elseif $input.type == 'radio'}
 									{foreach $input.values as $value}
-										<input type="radio"	name="{$input.name}"id="{$value.id}" value="{$value.value|escape:'htmlall':'UTF-8'}"
+										<input type="radio"	name="{$input.name|escape:'htmlall':'UTF-8'}"id="{$value.id|escape:'htmlall':'UTF-8'}" value="{$value.value|escape:'htmlall':'UTF-8'}"
 												{if $fields_value[$input.name] == $value.value}checked="checked"{/if}
 												{if isset($input.disabled) && $input.disabled}disabled="disabled"{/if} />
 										<label {if isset($input.class)}class="{$input.class|escape:'htmlall':'UTF-8'}"{/if} for="{$value.id|escape:'htmlall':'UTF-8'}">
@@ -194,12 +194,12 @@
 										<div class="translatable">
 											{foreach $languages as $language}
 												<div class="lang_{$language.id_lang|escape:'htmlall':'UTF-8'}" id="{$input.name|escape:'htmlall':'UTF-8'}_{$language.id_lang|escape:'htmlall':'UTF-8'}" style="display:{if $language.id_lang == $defaultFormLanguage}block{else}none{/if}; float: left;">
-													<textarea cols="{$input.cols}" rows="{$input.rows}" name="{$input.name}_{$language.id_lang}" {if isset($input.autoload_rte) && $input.autoload_rte}class="rte autoload_rte {if isset($input.class)}{$input.class}{/if}"{/if} >{$fields_value[$input.name][$language.id_lang]|escape:'htmlall':'UTF-8'}</textarea>
+													<textarea cols="{$input.cols|escape:'htmlall':'UTF-8'}" rows="{$input.rows|escape:'htmlall':'UTF-8'}" name="{$input.name|escape:'htmlall':'UTF-8'}_{$language.id_lang|escape:'htmlall':'UTF-8'}" {if isset($input.autoload_rte) && $input.autoload_rte}class="rte autoload_rte {if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}"{/if} >{$fields_value[$input.name][$language.id_lang]|escape:'htmlall':'UTF-8'}</textarea>
 												</div>
 											{/foreach}
 										</div>
 									{else}
-										<textarea name="{$input.name}" id="{if isset($input.id)}{$input.id}{else}{$input.name}{/if}" cols="{$input.cols}" rows="{$input.rows}" {if isset($input.autoload_rte) && $input.autoload_rte}class="rte autoload_rte {if isset($input.class)}{$input.class}{/if}"{/if}>{$fields_value[$input.name]|escape:'htmlall':'UTF-8'}</textarea>
+										<textarea name="{$input.name|escape:'htmlall':'UTF-8'}" id="{if isset($input.id)}{$input.id|escape:'htmlall':'UTF-8'}{else}{$input.name|escape:'htmlall':'UTF-8'}{/if}" cols="{$input.cols|escape:'htmlall':'UTF-8'}" rows="{$input.rows|escape:'htmlall':'UTF-8'}" {if isset($input.autoload_rte) && $input.autoload_rte}class="rte autoload_rte {if isset($input.class)}{$input.class|escape:'htmlall':'UTF-8'}{/if}"{/if}>{$fields_value[$input.name]|escape:'htmlall':'UTF-8'}</textarea>
 									{/if}
 								{elseif $input.type == 'checkbox'}
 									{foreach $input.values.query as $value}
@@ -218,7 +218,7 @@
 											<div id="image">
 												{$fields_value.image|escape:'htmlall':'UTF-8'}
 												<p align="center">{l s='File size' mod='quickpay'} {$fields_value.size|escape:'htmlall':'UTF-8'}kb</p>
-												<a href="{$current|escape:'htmlall':'UTF-8'}&{$identifier|escape:'htmlall':'UTF-8'}={$form_id|escape:'htmlall':'UTF-8'}&token={$token}&deleteImage=1">
+												<a href="{$current|escape:'htmlall':'UTF-8'}&{$identifier|escape:'htmlall':'UTF-8'}={$form_id|escape:'htmlall':'UTF-8'}&token={$token|escape:'htmlall':'UTF-8'}&deleteImage=1">
 													<img src="../img/admin/delete.gif" alt="{l s='Delete' mod='quickpay'}" /> {l s='Delete' mod='quickpay'}
 												</a>
 											</div><br />

@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/08/10 21:11:11 $
+*  $Date: 2015/08/17 17:12:16 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -26,7 +26,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.15a';
+		$this->version = '4.0.16';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -341,6 +341,8 @@ class QuickPay extends PaymentModule
 		$output .= $this->displayErrors();
 
 		$this->context->smarty->assign('module_dir', $this->_path);
+		$this->context->smarty->clearCompiledTemplate(
+				$this->local_path.'views/templates/hook/quickpay.tpl');
 
 		$output .= $this->context->smarty->fetch(
 				$this->local_path.'views/templates/admin/configure.tpl');
@@ -672,7 +674,7 @@ class QuickPay extends PaymentModule
 			return call_user_func('json_decode', $data);
 	}
 
-	public function getCurlHandle($resource, $fields = null, $post_flag = false)
+	public function getCurlHandle($resource, $fields = null, $method = null)
 	{
 		$ch = curl_init();
 		$header = array();
@@ -680,13 +682,19 @@ class QuickPay extends PaymentModule
 			call_user_func('base64_encode', ':'.$this->setup->user_key);
 		$header[] = 'Accept-Version: v10';
 		$url = 'https://api.quickpay.net/'.$resource;
+		if ($method == null)
+		{
+			if ($fields)
+				$method = 'POST';
+			else
+				$method = 'GET';
+		}
 		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-		if ($fields || $post_flag)
-			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 		if ($fields)
 		{
 			curl_setopt($ch, CURLOPT_POST, count($fields));
@@ -695,9 +703,9 @@ class QuickPay extends PaymentModule
 		return $ch;
 	}
 
-	public function doCurl($resource, $fields = null, $post_flag = false)
+	public function doCurl($resource, $fields = null, $method = null)
 	{
-		$ch = $this->getCurlHandle($resource, $fields, $post_flag);
+		$ch = $this->getCurlHandle($resource, $fields, $method);
 		$data = curl_exec($ch);
 		curl_close($ch);
 		return $data;
@@ -871,6 +879,8 @@ class QuickPay extends PaymentModule
 					true, null, 'step=3');
 			$callbackurl = $this->context->link->getModuleLink('quickpay',
 					'validation', array(), true);
+			$payment_url = $this->context->link->getModuleLink('quickpay',
+					'payment', array(), true);
 		}
 		else
 		{
@@ -881,6 +891,8 @@ class QuickPay extends PaymentModule
 				'order.php?step=3';
 			$callbackurl = 'http://'.$_SERVER['HTTP_HOST'].$this->_path.
 				'validation.php';
+			$payment_url = 'http://'.$_SERVER['HTTP_HOST'].$this->_path.
+				'payment.php';
 		}
 		$msgtype = 'authorize';
 		$protocol = '7';
@@ -893,25 +905,7 @@ class QuickPay extends PaymentModule
 		else
 			$fees = false;
 
-		$trans = Db::getInstance()->getRow('SELECT *
-				FROM '._DB_PREFIX_.'quickpay_execution
-				WHERE `id_cart` = '.$cart->id.'
-				ORDER BY `id_cart` ASC');
-		$seq_no = 0;
-		if ($trans)
-		{
-			$seq = explode('.', $trans['order_id']);
-			$seq_no = $seq[count($seq) - 1] + 1;
-			Db::getInstance()->Execute('DELETE
-					FROM '._DB_PREFIX_.'quickpay_execution
-					WHERE `id_cart` = '.$cart->id);
-		}
-		$order_id = $setup->orderprefix.(int)$cart->id.'.'.$seq_no;
-		Db::getInstance()->Execute(
-				'INSERT INTO '._DB_PREFIX_.'quickpay_execution
-				(`id_cart`, `order_id`)
-				VALUES ('.$cart->id.', "'.$order_id.'")');
-
+		$order_id = $setup->orderprefix.(int)$cart->id;
 		$done = false;
 		$done3d = false;
 		$setup_vars = $this->sortSetup();
@@ -1053,6 +1047,7 @@ class QuickPay extends PaymentModule
 			}
 			$fields = array(
 					'fields'           => $smarty_fields,
+					'payment_url'      => $payment_url,
 					'invoice_address'  => $invoice_address,
 					'delivery_address' => $delivery_address,
 					'customer'         => $customer,
@@ -1548,6 +1543,41 @@ class QuickPay extends PaymentModule
 	public function group($entries)
 	{
 		return "('".implode("','", $entries)."')";
+	}
+
+	public function payment()
+	{
+		$this->getSetup();
+		$fields = array();
+		foreach ($_POST as $k => $v)
+			if ($v != '')
+				$fields[] = $k.'='.urlencode($v);
+		$order_id = Tools::getValue('order_id');
+		$id_cart = (int)Tools::substr($order_id, 3);
+		$trans = Db::getInstance()->getRow('SELECT *
+				FROM '._DB_PREFIX_.'quickpay_execution
+				WHERE `id_cart` = '.$id_cart.'
+				ORDER BY `id_cart` ASC');
+		if ($trans)
+		{
+			$json = $trans['json'];
+			$vars = $this->jsonDecode($json);
+		}
+		else
+		{
+			$json = $this->doCurl('payments', $fields);
+			$vars = $this->jsonDecode($json);
+			if (empty($vars->id))
+				return;
+			$values = array($id_cart, $vars->id, $vars->order_id, 0, 0, pSql($json));
+			Db::getInstance()->Execute(
+					'INSERT INTO '._DB_PREFIX_.'quickpay_execution
+					(`id_cart`, `trans_id`, `order_id`, `accepted`, `test_mode`, `json`)
+					VALUES '.$this->group($values));
+		}
+		$json = $this->doCurl('payments/'.$vars->id.'/link', $fields, 'PUT');
+		$vars = $this->jsonDecode($json);
+		Tools::redirect($vars->url, '');
 	}
 
 	public function validate($json, $checksum)

@@ -1,11 +1,11 @@
 {*
 * NOTICE OF LICENSE
-* $Date: 2015/04/22 19:18:18 $
+* $Date: 2015/08/12 19:40:24 $
 * Written by Kjeld Borch Egevang
 * E-mail: helpdesk@quickpay.net
 *}
 
-<form action="https://payment.quickpay.net/" method="post" id="quickpay{$type|escape:'htmlall':'UTF-8'}">
+<form action="{$payment_url|escape:'javascript':'UTF-8'}" method="post" id="quickpay{$type|escape:'htmlall':'UTF-8'}">
 {foreach from=$fields item=field}
 	<input type="hidden" name="{$field.name|escape:'htmlall':'UTF-8'}" value="{$field.value|escape:'htmlall':'UTF-8'}" />
 {/foreach}
