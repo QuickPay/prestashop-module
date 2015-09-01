@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/08/17 17:12:16 $
+*  $Date: 2015/08/31 04:48:52 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -26,7 +26,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.16';
+		$this->version = '4.0.17';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -204,6 +204,8 @@ class QuickPay extends PaymentModule
 			$field = $vars->var_name;
 			$this->setup->$field = Configuration::get($vars->glob_name);
 			$this->setup->card_texts[$vars->var_name] = $vars->card_text;
+			if ($vars->var_name == 'maestro_3d')
+				$this->setup->card_texts['maestro'] = $this->l('Maestro');
 			if (in_array($vars->var_name, $credit_cards) && $this->setup->$field)
 				$this->setup->credit_cards[$vars->var_name] = $vars->card_text;
 			if (isset($credit_cards3d[$vars->var_name]) && $this->setup->$field)
@@ -744,32 +746,23 @@ class QuickPay extends PaymentModule
 			if (empty($row->payment_method))
 				continue;
 			if (isset($setup->lock_names[$row->payment_method]))
-			{
 				$lock_name = $setup->lock_names[$row->payment_method];
-				if (isset($fees[$lock_name]))
-				{
-					if ($row->fee < $fees[$lock_name])
-					{
-						/*
-						$fees[$lock_name.'_f'] = $fees[$lock_name];
-						$fees[$lock_name.'_3d_f'] = $fees[$lock_name.'_3d'];
-						*/
-						$fees[$lock_name] = $row->fee;
-						$fees[$lock_name.'_3d'] = $row->fee;
-					}
-					/*
-					if ($row->fee > $fees[$lock_name])
-					{
-						$fees[$lock_name.'_f'] = $row->fee;
-						$fees[$lock_name.'_3d_f'] = $row->fee;
-					}
-					*/
-				}
-				else
+			elseif (isset($setup->lock_names['3d-'.$row->payment_method]))
+				$lock_name = $row->payment_method; // Maestro
+			else
+				continue;
+			if (isset($fees[$lock_name]))
+			{
+				if ($row->fee < $fees[$lock_name])
 				{
 					$fees[$lock_name] = $row->fee;
 					$fees[$lock_name.'_3d'] = $row->fee;
 				}
+			}
+			else
+			{
+				$fees[$lock_name] = $row->fee;
+				$fees[$lock_name.'_3d'] = $row->fee;
 			}
 		}
 		curl_multi_close($mh);
@@ -1182,7 +1175,7 @@ class QuickPay extends PaymentModule
 		$trans = Db::getInstance()->getRow('SELECT *
 				FROM '._DB_PREFIX_.'quickpay_execution
 				WHERE `id_cart` = '.$order->id_cart.'
-				ORDER BY `id_cart` ASC');
+				ORDER BY `exec_id` ASC');
 		if (!$trans)
 			return '';
 		$order_id = $trans['order_id'];
@@ -1462,7 +1455,7 @@ class QuickPay extends PaymentModule
 		$trans = Db::getInstance()->getRow('SELECT *
 				FROM '._DB_PREFIX_.'quickpay_execution
 				WHERE `id_cart` = '.$order->id_cart.'
-				ORDER BY `id_cart` ASC');
+				ORDER BY `exec_id` ASC');
 		if (isset($trans['trans_id']))
 		{
 			// $brand = $this->metadata->brand;
@@ -1517,7 +1510,7 @@ class QuickPay extends PaymentModule
 			$trans = Db::getInstance()->getRow('SELECT *
 					FROM '._DB_PREFIX_.'quickpay_execution
 					WHERE `id_cart` = '.$order->id_cart.'
-					ORDER BY `id_cart` ASC');
+					ORDER BY `exec_id` ASC');
 			if ($trans)
 			{
 				$vars = $this->jsonDecode($trans['json']);
@@ -1557,7 +1550,7 @@ class QuickPay extends PaymentModule
 		$trans = Db::getInstance()->getRow('SELECT *
 				FROM '._DB_PREFIX_.'quickpay_execution
 				WHERE `id_cart` = '.$id_cart.'
-				ORDER BY `id_cart` ASC');
+				ORDER BY `exec_id` ASC');
 		if ($trans)
 		{
 			$json = $trans['json'];
@@ -1568,7 +1561,11 @@ class QuickPay extends PaymentModule
 			$json = $this->doCurl('payments', $fields);
 			$vars = $this->jsonDecode($json);
 			if (empty($vars->id))
-				return;
+			{
+				$json = $this->doCurl('payments', array('order_id='.$order_id), 'GET');
+				$vars = $this->jsonDecode($json);
+				$vars = $vars[0];
+			}
 			$values = array($id_cart, $vars->id, $vars->order_id, 0, 0, pSql($json));
 			Db::getInstance()->Execute(
 					'INSERT INTO '._DB_PREFIX_.'quickpay_execution
