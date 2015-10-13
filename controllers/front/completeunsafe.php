@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2015/07/05 05:30:03 $
+ *  $Date: 2015/09/29 07:28:15 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -30,12 +30,10 @@ class QuickPayCompleteUnsafeModuleFrontController extends ModuleFrontController
 					ORDER BY `id_cart` ASC');
 			if ($trans)
 			{
-				$order_id = $trans['order_id'];
 				$quickpay = new Quickpay();
 				$setup = $quickpay->getSetup();
-				$json = $quickpay->doCurl('payments?order_id='.$order_id);
+				$json = $quickpay->doCurl('payments/'.$trans['trans_id']);
 				$vars = $quickpay->jsonDecode($json);
-				$vars = $vars[0];
 				$json = Tools::jsonEncode($vars);
 				if ($vars->accepted == 1)
 				{
