@@ -6,14 +6,15 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/08/31 04:48:52 $
+*  $Date: 2015/10/12 19:03:37 $
 *  E-mail: helpdesk@quickpay.net
 */
 
 if (!defined('_PS_VERSION_'))
 	exit;
 
-if (stream_resolve_include_path(_PS_MODULE_DIR_.'quickpay/quickpay.inc.php'))
+if (function_exists('stream_resolve_include_path') &&
+		stream_resolve_include_path(_PS_MODULE_DIR_.'quickpay/quickpay.inc.php'))
 	include(_PS_MODULE_DIR_.'quickpay/quickpay.inc.php');
 
 
@@ -26,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.17';
+		$this->version = '4.0.19';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -718,6 +719,8 @@ class QuickPay extends PaymentModule
 		$setup = $this->setup;
 		$data = $this->doCurl('fees/formulas');
 		$vars = $this->jsonDecode($data);
+		if (!is_array($vars))
+			return false;
 		$fields = array('amount='.$amount);
 		$chs = array();
 		$mh = curl_multi_init();
@@ -755,8 +758,15 @@ class QuickPay extends PaymentModule
 			{
 				if ($row->fee < $fees[$lock_name])
 				{
+					$fees[$lock_name.'_f'] = $fees[$lock_name];
+					$fees[$lock_name.'_3d_f'] = $fees[$lock_name.'_3d'];
 					$fees[$lock_name] = $row->fee;
 					$fees[$lock_name.'_3d'] = $row->fee;
+				}
+				if ($row->fee > $fees[$lock_name])
+				{
+					$fees[$lock_name.'_f'] = $row->fee;
+					$fees[$lock_name.'_3d_f'] = $row->fee;
 				}
 			}
 			else
@@ -1551,12 +1561,12 @@ class QuickPay extends PaymentModule
 				FROM '._DB_PREFIX_.'quickpay_execution
 				WHERE `id_cart` = '.$id_cart.'
 				ORDER BY `exec_id` ASC');
-		if ($trans)
+		if ($trans && $trans['json'])
 		{
 			$json = $trans['json'];
 			$vars = $this->jsonDecode($json);
 		}
-		else
+		if (empty($vars))
 		{
 			$json = $this->doCurl('payments', $fields);
 			$vars = $this->jsonDecode($json);
