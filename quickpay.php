@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/10/12 19:03:37 $
+*  $Date: 2015/10/30 07:53:57 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.19';
+		$this->version = '4.0.20';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -957,6 +957,8 @@ class QuickPay extends PaymentModule
 						break;
 				}
 			}
+			if ($vars->var_name == 'mobilepay' && $country->iso_code != 'DK')
+					continue;
 			if ($vars->var_name == 'viabill')
 			{
 				// Autofee does not work
@@ -1233,7 +1235,7 @@ class QuickPay extends PaymentModule
 
 		if (!$double_post && Tools::isSubmit('qpcancel'))
 		{
-			$action_data = $this->doCurl('payments/'.$trans['trans_id'].'/cancel', null, true);
+			$action_data = $this->doCurl('payments/'.$trans['trans_id'].'/cancel', null, 'POST');
 			// $html .= '<pre>'.print_r($action_data, true).'</pre>';
 			// $html .= '<pre>'.print_r(json_decode($action_data), true).'</pre>';
 		}
