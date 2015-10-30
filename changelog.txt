@@ -1,0 +1,19 @@
+Version 4.0.17
+2015-08-18 2015-09-01
+Fixed fee for Maestro.
+Handle case where order_id already exists.
+Version 4.0.17
+2015-09-01 2015-10-01
+File: quickpay.php
+Version 4.0.18.
+Check fees are valid.
+Fixed transition from version 4.0.15.
+Version 4.0.19
+2015-09-30 2015-10-01
+Support for PHP 5.3.
+Version 4.0.20
+2015-10-01 2015-10-31
+Fixed description for key used with fees.
+Fixed cancel function.
+Only use mobilepay for DK.
+Fees for foreign cards were not displayed.
