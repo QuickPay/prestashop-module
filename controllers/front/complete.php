@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2015/06/03 19:37:10 $
+ *  $Date: 2016/01/27 07:19:42 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -22,6 +22,8 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
 		$id_cart = Tools::getValue('id_cart');
 		$id_module = Tools::getValue('id_module');
 		$key = Tools::getValue('key');
+		if (!$id_module || !$key)
+			Tools::redirect('history.php');
 		for ($i = 0; $i < 10; $i++)
 		{
 			/* Wait for validation */
@@ -30,7 +32,28 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
 				break;
 			sleep(1);
 		}
-		if (!$id_order || !$id_module || !$key)
+		if (!$id_order)
+		{
+			$trans = Db::getInstance()->getRow('SELECT *
+					FROM '._DB_PREFIX_.'quickpay_execution
+					WHERE `id_cart` = '.$id_cart.'
+					ORDER BY `id_cart` ASC');
+			if ($trans)
+			{
+				$quickpay = new Quickpay();
+				$setup = $quickpay->getSetup();
+				$json = $quickpay->doCurl('payments/'.$trans['trans_id']);
+				$vars = $quickpay->jsonDecode($json);
+				$json = Tools::jsonEncode($vars);
+				if ($vars->accepted == 1)
+				{
+					$checksum = $quickpay->sign($json, $setup->private_key);
+					$quickpay->validate($json, $checksum, _PS_OS_ERROR_);
+				}
+			}
+			$id_order = Order::getOrderByCartId((int)$id_cart);
+		}
+		if (!$id_order)
 			Tools::redirect('history.php');
 		$order = new Order((int)$id_order);
 		$context = Context::getContext();
