@@ -17,3 +17,19 @@ Fixed description for key used with fees.
 Fixed cancel function.
 Only use mobilepay for DK.
 Fees for foreign cards were not displayed.
+Version 4.0.21
+2015-10-31 2016-02-02
+Updated manual.
+Handle order that has already been paid.
+Check user key when configuration is saved.
+Round fee to 6 decimals.
+Removed api_key and agreement_id from configuration.
+Check for default currency.
+Show failure if the currency was changed.
+Die if payment fails (due to wrong key etc.).
+Warning if shop is in maintenance mode.
+Put order in error state if callback was not detected.
+Setting for test payments added.
+Version 4.0.22
+2016-02-03 2016-02-06
+Handle reused order ID (cart ID) gracefully.
