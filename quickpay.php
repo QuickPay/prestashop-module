@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2015/10/30 07:53:57 $
+*  $Date: 2016/02/05 22:06:42 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.20';
+		$this->version = '4.0.22';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -123,11 +123,10 @@ class QuickPay extends PaymentModule
 	{
 		$this->setup_vars = array(
 				array('_QUICKPAY_MERCHANT_ID', 'merchant_id', $this->l('Quickpay merchant ID'), '', ''),
-				array('_QUICKPAY_AGREEMENT_ID', 'agreement_id', $this->l('Quickpay agreement ID'), '', ''),
-				array('_QUICKPAY_API_KEY', 'api_key', $this->l('Quickpay API key'), '', ''),
 				array('_QUICKPAY_PRIVATE_KEY', 'private_key', $this->l('Quickpay private key'), '', ''),
 				array('_QUICKPAY_USER_KEY', 'user_key', $this->l('Quickpay user key'), '', ''),
 				array('_QUICKPAY_ORDER_PREFIX', 'orderprefix', $this->l('Order prefix'), '000', ''),
+				array('_QUICKPAY_TESTMODE', 'testmode', $this->l('Accept test payments'), 0, ''),
 				array('_QUICKPAY_COMBINE', 'combine', $this->l('Creditcards combined window'), 0, ''),
 				array('_QUICKPAY_AUTOFEE', 'autofee', $this->l('Customer pays the card fee'), 0, ''),
 				array('_QUICKPAY_API', 'api', $this->l('Activate API'), 1, ''),
@@ -272,6 +271,43 @@ class QuickPay extends PaymentModule
 		return $setup_vars;
 	}
 
+	public function getPageLink($name, $parm)
+	{
+		if ($this->v15)
+			$url = $this->context->link->getPageLink(
+					$name, true, null, 'step=3'
+					);
+		else
+		{
+			$url = Configuration::get('PS_SSL_ENABLED') ? 'https://' : 'http://';
+			$url .= $_SERVER['HTTP_HOST'].__PS_BASE_URI__.$name.'.php?'.$parm;
+		}
+		return $url;
+	}
+
+	public function getModuleLink($name, $parms = array())
+	{
+		if ($this->v15)
+		{
+			$url = $this->context->link->getModuleLink(
+					$this->name, $name, $parms, true
+				);
+		}
+		else
+		{
+			$url = Configuration::get('PS_SSL_ENABLED') ? 'https://' : 'http://';
+			$url .= $_SERVER['HTTP_HOST'].$this->_path.$name.'.php';
+			if ($parms)
+			{
+				$key_values = array();
+				foreach ($parms as $k => $v)
+					$key_values[] = $k.'='.$v;
+				$url .= '?'.implode('&', $key_values);
+			}
+		}
+		return $url;
+	}
+
 	public function dump($var, $name = null)
 	{
 		print '<pre>';
@@ -321,7 +357,10 @@ class QuickPay extends PaymentModule
 			return $this->displayError($err);
 		}
 
-		$output = '';
+		if (Configuration::get('PS_SHOP_ENABLE'))
+			$output = '';
+		else
+			$output = $this->displayError($this->l('The callback function does not work when the shop is in maintenance mode'));
 		$row = Db::getInstance()->ExecuteS('SHOW TABLES LIKE
 				"'._DB_PREFIX_.'quickpay_execution"');
 		if (!$row) // Not installed properly
@@ -342,6 +381,12 @@ class QuickPay extends PaymentModule
 		$this->getSetup();
 		$this->postProcess();
 		$output .= $this->displayErrors();
+		if (!$this->post_errors)
+			$output .= '
+				<div class="conf confirm">
+				<img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />
+				'.$this->l('Settings updated').'
+				</div>';
 
 		$this->context->smarty->assign('module_dir', $this->_path);
 		$this->context->smarty->clearCompiledTemplate(
@@ -659,13 +704,25 @@ class QuickPay extends PaymentModule
 			$setup = $this->getSetup();
 			if (!$setup->merchant_id)
 				$this->post_errors[] = $this->l('Merchant ID is required.');
-			if (!$setup->agreement_id)
-				$this->post_errors[] = $this->l('Agreement ID is required.');
-			if (!$setup->api_key)
-				$this->post_errors[] = $this->l('API key is required.');
 			if (Tools::strlen($setup->orderprefix) != 3)
 				$this->post_errors[] =
 					$this->l('Order prefix must be exactly 3 characters long.');
+			$data = $this->doCurl('payments', array(), 'POST');
+			$vars = $this->jsonDecode($data);
+			if ($vars->message == 'Invalid API key')
+			{
+					$this->post_errors[] = $this->l('Invalid Quickpay user key. Check the key at').
+						' <a href="https://manage.quickpay.net">https://manage.quickpay.net</a>.';
+			}
+			elseif ($setup->autofee)
+			{
+				$fees = $this->getFees(100);
+				if (!$fees)
+				{
+					$this->post_errors[] = $this->l('Could not access fees via user key. Check access rights in').
+						' <a href="https://manage.quickpay.net">https://manage.quickpay.net</a>.';
+				}
+			}
 		}
 	}
 
@@ -871,32 +928,19 @@ class QuickPay extends PaymentModule
 		$cart_total = number_format($cart->getOrderTotal(), 2, '', '');
 		$cart_total_no_vat = number_format($cart->getOrderTotal(false), 2, '', '');
 		$tax_total = $cart_total - $cart_total_no_vat;
-		if ($this->v15)
-		{
-			if (!defined('QUICKPAY_COMPLETE'))
-				define('QUICKPAY_COMPLETE', 'complete');
-			$continueurl = $this->context->link->getModuleLink('quickpay',
-					QUICKPAY_COMPLETE, array('key' => $customer->secure_key,
-						'id_cart' => (int)$cart->id, 'id_module' => (int)$this->id), true);
-			$cancelurl = $this->context->link->getPageLink('order',
-					true, null, 'step=3');
-			$callbackurl = $this->context->link->getModuleLink('quickpay',
-					'validation', array(), true);
-			$payment_url = $this->context->link->getModuleLink('quickpay',
-					'payment', array(), true);
-		}
-		else
-		{
-			$continueurl = 'http://'.$_SERVER['HTTP_HOST'].$this->_path.
-				'complete.php?key='.$customer->secure_key.'&id_cart='.
-				(int)$cart->id.'&id_module='.(int)$this->id;
-			$cancelurl = 'http://'.$_SERVER['HTTP_HOST'].__PS_BASE_URI__.
-				'order.php?step=3';
-			$callbackurl = 'http://'.$_SERVER['HTTP_HOST'].$this->_path.
-				'validation.php';
-			$payment_url = 'http://'.$_SERVER['HTTP_HOST'].$this->_path.
-				'payment.php';
-		}
+		if (!defined('QUICKPAY_COMPLETE'))
+			define('QUICKPAY_COMPLETE', 'complete');
+		$continueurl = $this->getModuleLink(
+				QUICKPAY_COMPLETE,
+				array(
+					'key' => $customer->secure_key,
+					'id_cart' => (int)$cart->id,
+					'id_module' => (int)$this->id
+				)
+			);
+		$cancelurl = $this->getPageLink('order', 'step=3');
+		$callbackurl = $this->getModuleLink('validation');
+		$payment_url = $this->getModuleLink('payment');
 		$msgtype = 'authorize';
 		$protocol = '7';
 		$splitpayment = '1';
@@ -1017,7 +1061,6 @@ class QuickPay extends PaymentModule
 			$smarty->assign('fees', $fee_texts);
 			$branding = $setup->branding ? $setup->branding : '';
 			$csum_fields = array(
-					'agreement_id'                 => $setup->agreement_id,
 					'amount'                       => $amount,
 					'autocapture'                  => $setup->autocapture,
 					'autofee'                      => $setup->autofee,
@@ -1040,8 +1083,6 @@ class QuickPay extends PaymentModule
 					'vat_amount'                   => $tax_total,
 					'version'                      => 'v10'
 						);
-			$csum_fields['checksum'] =
-				$this->sign(implode(' ', $csum_fields), $setup->api_key);
 			$smarty_fields = array();
 			foreach ($csum_fields as $key => $value)
 			{
@@ -1166,11 +1207,22 @@ class QuickPay extends PaymentModule
 			return $amount;
 	}
 
-	public function hookPaymentReturn()
+	public function hookPaymentReturn($params)
 	{
 		if (!$this->active)
 			return;
 
+		$order = $params['objOrder'];
+		$state = $order->getCurrentState();
+		if ($state == _PS_OS_ERROR_)
+		{
+			$status = 'callback';
+			$msg = 'QuickPay: Confirmation failed';
+			Logger::addLog($msg, 2, 0, 'Order', $order->id);
+		}
+		else
+			$status = 'ok';
+		$this->smarty->assign('status', $status);
 		return $this->display(__FILE__, 'views/templates/hook/confirmation.tpl');
 	}
 
@@ -1204,6 +1256,9 @@ class QuickPay extends PaymentModule
 			$html = '<br />
 				<fieldset>
 				<legend>'.$this->l('Quickpay API').'</legend>';
+
+		if (!Configuration::get('PS_SHOP_ENABLE'))
+			$html .= '<p class="error alert-danger">'.$this->l('The callback function does not work when the shop is in maintenance mode').'</p>';
 
 		$double_post = false;
 		$status_data = $this->doCurl('payments/'.$trans['trans_id']);
@@ -1559,41 +1614,100 @@ class QuickPay extends PaymentModule
 				$fields[] = $k.'='.urlencode($v);
 		$order_id = Tools::getValue('order_id');
 		$id_cart = (int)Tools::substr($order_id, 3);
-		$trans = Db::getInstance()->getRow('SELECT *
-				FROM '._DB_PREFIX_.'quickpay_execution
-				WHERE `id_cart` = '.$id_cart.'
-				ORDER BY `exec_id` ASC');
-		if ($trans && $trans['json'])
+		$cart = new Cart($id_cart);
+		if (!Validate::isLoadedObject($cart))
 		{
-			$json = $trans['json'];
-			$vars = $this->jsonDecode($json);
+			$msg = 'QuickPay: Payment error. Not a valid cart';
+			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+			die('Not a valid cart');
 		}
-		if (empty($vars))
+		$customer = new Customer((int)$cart->id_customer);
+		$currency = new Currency((int)$cart->id_currency);
+		Db::getInstance()->Execute('DELETE
+				FROM '._DB_PREFIX_.'quickpay_execution
+				WHERE `id_cart` = '.$id_cart);
+		$json = $this->doCurl('payments', $fields);
+		$vars = $saved_vars = $this->jsonDecode($json);
+		if (empty($vars->id))
 		{
-			$json = $this->doCurl('payments', $fields);
+			// Payment already exists
+			$json = $this->doCurl('payments', array('order_id='.$order_id), 'GET');
 			$vars = $this->jsonDecode($json);
-			if (empty($vars->id))
+			if (isset($vars->message))
 			{
-				$json = $this->doCurl('payments', array('order_id='.$order_id), 'GET');
-				$vars = $this->jsonDecode($json);
-				$vars = $vars[0];
+				if (isset($saved_vars->message))
+				{
+					$msg = 'QuickPay: Payment error: '.$saved_vars->message;
+					Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+					die($saved_vars->message);
+				}
+				else
+				{
+					$msg = 'QuickPay: Payment error: '.$vars->message;
+					Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+					die($vars->message);
+				}
 			}
-			$values = array($id_cart, $vars->id, $vars->order_id, 0, 0, pSql($json));
-			Db::getInstance()->Execute(
-					'INSERT INTO '._DB_PREFIX_.'quickpay_execution
-					(`id_cart`, `trans_id`, `order_id`, `accepted`, `test_mode`, `json`)
-					VALUES '.$this->group($values));
+			$vars = $vars[0];
+		}
+		$values = array($id_cart, $vars->id, $vars->order_id, 0, 0, pSql($json));
+		Db::getInstance()->Execute(
+				'INSERT INTO '._DB_PREFIX_.'quickpay_execution
+				(`id_cart`, `trans_id`, `order_id`, `accepted`, `test_mode`, `json`)
+				VALUES '.$this->group($values));
+		if ($vars->accepted)
+		{
+			// Already paid
+			$msg = 'QuickPay: Payment notice: Already paid';
+			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+			$paid_url = $this->getModuleLink(
+				'complete',
+				array(
+					'key' => $customer->secure_key,
+					'id_cart' => (int)$cart->id,
+					'id_module' => (int)$this->id
+					)
+				);
+			Tools::redirect($paid_url, '');
+			return;
+		}
+		if ($currency->iso_code != $vars->currency)
+		{
+			/*
+			$fields = array('currency' => $currency->iso_code);
+			$res = $this->doCurl('payments/'.$vars->id, $fields, 'PATCH');
+			*/
+			$msg = sprintf(
+					'QuickPay: Payment error: Currency was changed from %s to %s',
+					$vars->currency,
+					$currency->iso_code
+				);
+			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+			$cart->delete();
+			$fail_url = $this->getModuleLink('fail', array('status' => 'currency'));
+			Tools::redirect($fail_url, '');
+			return;
 		}
 		$json = $this->doCurl('payments/'.$vars->id.'/link', $fields, 'PUT');
 		$vars = $this->jsonDecode($json);
+		if (isset($vars->message))
+		{
+			$msg = 'QuickPay: Payment error: '.$vars->message;
+			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+			die($vars->message);
+		}
 		Tools::redirect($vars->url, '');
 	}
 
-	public function validate($json, $checksum)
+	public function validate($json, $checksum, $id_order_state = _PS_OS_PAYMENT_)
 	{
 		$this->getSetup();
 		if ($checksum != $this->sign($json, $this->setup->private_key))
+		{
+			$msg = 'QuickPay: Validate error. Checksum failed. Check private key in configuration';
+			Logger::addLog($msg, 2);
 			die('Checksum failed');
+		}
 
 		$vars = $this->jsonDecode($json);
 		if ($this->v16)
@@ -1604,10 +1718,30 @@ class QuickPay extends PaymentModule
 		$test_mode = $vars->test_mode ? 1 : 0;
 		$id_cart = (int)Tools::substr($vars->order_id, 3);
 		$cart = new Cart($id_cart);
+		if ($test_mode && !$this->setup->testmode)
+		{
+			$cart->delete();
+			$msg = 'QuickPay: Validate error. Will not accept test payment!';
+			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+			if ($id_order_state == _PS_OS_ERROR_)
+			{
+				$fail_url = $this->getModuleLink('fail', array('status' => 'test'));
+				Tools::redirect($fail_url, '');
+			}
+			die('Will not accept test payment!');
+		}
 		if (!Validate::isLoadedObject($cart))
+		{
+			$msg = 'QuickPay: Validate error. Not a valid cart';
+			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
 			die('Not a valid cart');
+		}
 		if ($cart->OrderExists() != 0)
+		{
+			$msg = 'QuickPay: Validate error. Order already exists';
+			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
 			die('Order already exists');
+		}
 		if ($this->v15)
 		{
 			Shop::setContext(Shop::CONTEXT_SHOP, $cart->id_shop);
@@ -1631,10 +1765,14 @@ class QuickPay extends PaymentModule
 					'cardtype' => $vars->metadata->brand);
 			if ($this->setup->autofee && isset($vars->operations))
 				$this->addFee($cart, $amount);
-			if (!$this->validateOrder($cart->id, _PS_OS_PAYMENT_, $amount,
+			if (!$this->validateOrder($cart->id, $id_order_state, $amount,
 						$brand, null, $extra_vars, null, false,
 						$cart->secure_key))
+			{
+				$msg = 'QuickPay: Validate error. Unable to process order';
+				Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
 				die('Prestashop error - unable to process order..');
+			}
 		}
 	}
 
@@ -1662,9 +1800,11 @@ class QuickPay extends PaymentModule
 		$product->quantity = 100;
 		$product->link_rewrite = array($def_lang => 'fee');
 		$product->reference = $this->l('cardfee');
+		$id_currency = Configuration::get('PS_CURRENCY_DEFAULT');
 		$currency = new Currency((int)$cart->id_currency);
-		if ($currency->conversion_rate)
+		if ($currency->id != $id_currency && $currency->conversion_rate)
 			$product->price /= $currency->conversion_rate;
+		$product->price = Tools::ps_round($product->price, 6);
 		if ($this->v15)
 			$product->is_virtual = 1;
 		if ($this->v14)
