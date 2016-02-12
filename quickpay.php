@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/02/05 22:06:42 $
+*  $Date: 2016/02/12 04:00:03 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.22';
+		$this->version = '4.0.22a';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -1747,6 +1747,8 @@ class QuickPay extends PaymentModule
 			Shop::setContext(Shop::CONTEXT_SHOP, $cart->id_shop);
 			$customer = new Customer((int)$cart->id_customer);
 			Context::getContext()->customer = $customer;
+			$currency = new Currency((int)$cart->id_currency);
+			Context::getContext()->currency = $currency;
 		}
 		Db::getInstance()->Execute('DELETE
 				FROM '._DB_PREFIX_.'quickpay_execution
