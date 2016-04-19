@@ -33,3 +33,15 @@ Setting for test payments added.
 Version 4.0.22
 2016-02-03 2016-02-06
 Handle reused order ID (cart ID) gracefully.
+Version 4.0.23
+2016-02-06 2016-02-29
+Check access rights for payments when configuration is saved.
+Display fraud suspected data.
+Product for fee is now always deactivated.
+Fixed handling of amounts in JPY and other currencies that have a number of decimals that is not 2.
+Set currency in context to cart currency.
+Version 4.0.24
+2016-02-29 2016-04-14
+Reject validation if payment has already been accepted.
+Added extra check for failed payment.
+Added facilitator to payment status (e.g. MobilePay).
