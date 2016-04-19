@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/02/12 04:00:03 $
+*  $Date: 2016/04/18 07:13:11 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.22a';
+		$this->version = '4.0.24';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -723,6 +723,13 @@ class QuickPay extends PaymentModule
 						' <a href="https://manage.quickpay.net">https://manage.quickpay.net</a>.';
 				}
 			}
+			$data = $this->doCurl('payments', array('order_id=0'), 'GET');
+			$vars = $this->jsonDecode($data);
+			if ($vars && Tools::substr($vars->message, 0, 14) == 'Not authorized')
+			{
+					$this->post_errors[] = $this->l('Could not access payments via user key. Check access rights in').
+						' <a href="https://manage.quickpay.net">https://manage.quickpay.net</a>.';
+			}
 		}
 	}
 
@@ -904,6 +911,83 @@ class QuickPay extends PaymentModule
 		return $ordering_list;
 	}
 
+	public function getDecimals($iso_code)
+	{
+		$decimals = array(
+				'BHD' => 3,
+				'BIF' => 0,
+				'BYR' => 0,
+				'CLF' => 4,
+				'CLP' => 0,
+				'CVE' => 0,
+				'DJF' => 0,
+				'GNF' => 0,
+				'IQD' => 3,
+				'ISK' => 0,
+				'JOD' => 3,
+				'JPY' => 0,
+				'KMF' => 0,
+				'KRW' => 0,
+				'KWD' => 3,
+				'LYD' => 3,
+				'MGA' => 1,
+				'MRO' => 1,
+				'OMR' => 3,
+				'PYG' => 0,
+				'RWF' => 0,
+				'TND' => 3,
+				'UGX' => 0,
+				'UYI' => 0,
+				'VND' => 0,
+				'VUV' => 0,
+				'XAF' => 0,
+				'XOF' => 0,
+				'XPF' => 0,
+				);
+		if (isset($decimals[$iso_code]))
+			return $decimals[$iso_code];
+		return 2;
+	}
+
+	public function fromQpAmount($amount, $currency)
+	{
+		$decimals = $this->getDecimals($currency->iso_code);
+		return $amount / pow(10, $decimals);
+	}
+
+	public function toQpAmount($amount, $currency)
+	{
+		$decimals = $this->getDecimals($currency->iso_code);
+		return Tools::ps_round($amount * pow(10, $decimals));
+	}
+
+	public function displayQpAmount($amount, $currency)
+	{
+		$amount = $this->fromQpAmount($amount, $currency);
+		return Tools::displayPrice($amount, $currency);
+	}
+
+	public function fromUserAmount($amount, $currency)
+	{
+		$use_comma = strpos(Tools::displayPrice(1.23, $currency), ',') !== false;
+		if ($use_comma)
+		{
+			$amount = str_replace('.', '', $amount);
+			$amount = str_replace(',', '.', $amount);
+		}
+		else
+			$amount = str_replace(',', '', $amount);
+		return $amount;
+	}
+
+	public function toUserAmount($amount, $currency)
+	{
+		$use_comma = strpos(Tools::displayPrice(1.23, $currency), ',') !== false;
+		if ($use_comma)
+			$amount = str_replace('.', ',', $amount);
+		return $amount;
+	}
+
 	public function hookPaymentTop()
 	{
 		if ($this->v16)
@@ -925,8 +1009,9 @@ class QuickPay extends PaymentModule
 		$currency = new Currency((int)$id_currency);
 
 		$language = new Language($this->context->language->id);
-		$cart_total = number_format($cart->getOrderTotal(), 2, '', '');
-		$cart_total_no_vat = number_format($cart->getOrderTotal(false), 2, '', '');
+		$decimals = $this->getDecimals($currency->iso_code);
+		$cart_total = number_format($cart->getOrderTotal(), $decimals, '', '');
+		$cart_total_no_vat = number_format($cart->getOrderTotal(false), $decimals, '', '');
 		$tax_total = $cart_total - $cart_total_no_vat;
 		if (!defined('QUICKPAY_COMPLETE'))
 			define('QUICKPAY_COMPLETE', 'complete');
@@ -980,7 +1065,8 @@ class QuickPay extends PaymentModule
 			{
 				if ($done3d)
 					continue;
-				$card_text = implode(' / ', $setup->credit_cards3d);
+				// $card_text = implode(' / ', $setup->credit_cards3d);
+				$card_text = $this->l('credit card');
 				$card_list = array_merge(array_keys($setup->credit_cards2di),
 						array_keys($setup->credit_cards3di));
 				$card_type_lock = implode(',', $setup->card_type_locks3d);
@@ -1040,11 +1126,11 @@ class QuickPay extends PaymentModule
 							$fee_text['name'] = $this->l('Fee for').
 								' '.$setup->card_texts[$card_name].":\xC2\xA0";
 						$fee_text['amount'] =
-							Tools::displayPrice($fees[$card_name] / 100, $currency);
+							$this->displayQpAmount($fees[$card_name], $currency);
 						if (!empty($fees[$card_name.'_f']))
 							$fee_text['amount'] .= sprintf(' (%s: %s)',
 									$this->l('foreign'),
-									Tools::displayPrice($fees[$card_name.'_f'] / 100, $currency));
+									$this->displayQpAmount($fees[$card_name.'_f'], $currency));
 						$fee_texts[] = $fee_text;
 						if ($card_name == 'dk')
 						{
@@ -1052,7 +1138,7 @@ class QuickPay extends PaymentModule
 							$fee_text['name'] = $this->l('Fee for').
 								' '.$this->l('Visadankort').":\xC2\xA0";
 							$fee_text['amount'] =
-								Tools::displayPrice($fees[$card_name] / 100, $currency);
+								$this->displayQpAmount($fees[$card_name], $currency);
 							$fee_texts[] = $fee_text;
 						}
 					}
@@ -1188,25 +1274,6 @@ class QuickPay extends PaymentModule
 		return $brand;
 	}
 
-	public function displayAmount($amount)
-	{
-		$use_comma = strpos(Tools::displayPrice(1.23), ',') !== false;
-		$amount = Tools::ps_round($amount, 2);
-		if ($use_comma)
-			return str_replace('.', ',', $amount);
-		else
-			return $amount;
-	}
-
-	public function getAmount($amount)
-	{
-		$use_comma = strpos(Tools::displayPrice(1.23), ',') !== false;
-		if ($use_comma)
-			return str_replace(',', '.', $amount);
-		else
-			return $amount;
-	}
-
 	public function hookPaymentReturn($params)
 	{
 		if (!$this->active)
@@ -1273,7 +1340,8 @@ class QuickPay extends PaymentModule
 		if (!$double_post && Tools::isSubmit('qpcapture'))
 		{
 			$amount = Tools::getValue('acramount');
-			$amount = $this->getAmount($amount) * 100;
+			$amount = $this->fromUserAmount($amount, $currency);
+			$amount = $this->toQpAmount($amount, $currency);
 			$fields = array('amount='.$amount);
 			$action_data = $this->doCurl('payments/'.$trans['trans_id'].'/capture', $fields);
 			// $html .= '<pre>'.print_r(json_decode($action_data), true).'</pre>';
@@ -1282,7 +1350,8 @@ class QuickPay extends PaymentModule
 		if (!$double_post && Tools::isSubmit('qprefund'))
 		{
 			$amount = Tools::getValue('acramountref');
-			$amount = $this->getAmount($amount) * 100;
+			$amount = $this->fromUserAmount($amount, $currency);
+			$amount = $this->toQpAmount($amount, $currency);
 			$fields = array('amount='.$amount);
 			$action_data = $this->doCurl('payments/'.$trans['trans_id'].'/refund', $fields);
 			// $html .= '<pre>'.print_r(json_decode($action_data), true).'</pre>';
@@ -1351,6 +1420,7 @@ class QuickPay extends PaymentModule
 		$html .= $this->l('Acquirer:');
 		$html .= '</th><td>';
 		$html .= Tools::ucfirst($vars->acquirer);
+		$html .= ' '.Tools::ucfirst($vars->facilitator);
 		$html .= '</td></tr>';
 
 		$html .= '<tr><th>';
@@ -1374,6 +1444,16 @@ class QuickPay extends PaymentModule
 					strtotime($vars->created_at)), null, true);
 		$html .= '</td></tr>';
 
+		if ($vars->metadata->fraud_suspected)
+		{
+			$html .= '<tr><th>';
+			$html .= $this->l('Fraud:');
+			$html .= '</th><td>';
+			$html .= implode('</td></tr><tr><td></td><td>',
+					$vars->metadata->fraud_remarks);
+			$html .= '</td></tr>';
+		}
+
 		$html .= '</tbody>';
 		$html .= '</table><br />';
 
@@ -1391,7 +1471,7 @@ class QuickPay extends PaymentModule
 		$html .= '</th></tr>';
 		$html .= '</thead>';
 		$html .= '<tbody>';
-		$resttocap = - $vars->balance / 100;
+		$resttocap = - $vars->balance;
 		$resttoref = 0;
 		$allowcancel = true;
 		$qp_count = count($vars->operations);
@@ -1404,7 +1484,7 @@ class QuickPay extends PaymentModule
 			switch ($operation->type)
 			{
 				case 'capture':
-					$resttoref += $operation->amount / 100;
+					$resttoref += $operation->amount;
 					$allowcancel = false;
 					$html .= $this->l('Captured');
 					break;
@@ -1416,13 +1496,13 @@ class QuickPay extends PaymentModule
 					}
 					else
 					{
-						$resttocap += $operation->amount / 100;
+						$resttocap += $operation->amount;
 						$html .= $this->l('Authorized');
 					}
 					break;
 				case 'refund':
-					$resttoref -= $operation->amount / 100;
-					$resttocap -= $operation->amount / 100;
+					$resttoref -= $operation->amount;
+					$resttocap -= $operation->amount;
 					$html .= $this->l('Refunded');
 					break;
 				case 'cancel':
@@ -1431,7 +1511,7 @@ class QuickPay extends PaymentModule
 					$html .= $this->l('Cancelled');
 					break;
 				case 'session':
-					$resttocap += $operation->amount / 100;
+					$resttocap += $operation->amount;
 					$html .= $this->l('Pending');
 					break;
 				default:
@@ -1441,17 +1521,17 @@ class QuickPay extends PaymentModule
 			if ($operation->qp_status_code != '20000')
 				$html .= ' ['.$this->l('Not approved!').']';
 			$html .= '</td><td style="text-align:right">';
-			$html .= ' '.Tools::displayPrice($operation->amount / 100, $currency);
+			$html .= ' '.$this->displayQpAmount($operation->amount, $currency);
 			$html .= '</td></tr>';
 		}
 		if ($resttocap < 0)
 			$resttocap = 0;
+		$resttocap = $this->fromQpAmount($resttocap, $currency);
 		if ($resttocap > $order->total_paid)
 			$resttocap = $order->total_paid;
-		$resttocap = $this->displayAmount($resttocap);
 		if ($resttoref < 0)
 			$resttoref = 0;
-		$resttoref = $this->displayAmount($resttoref);
+		$resttoref = $this->fromQpAmount($resttoref, $currency);
 		$html .= '</tbody>';
 		$html .= '</table>';
 
@@ -1470,6 +1550,7 @@ class QuickPay extends PaymentModule
 		$html .= '<br /><br />';
 		if ($resttocap > 0)
 		{
+			$resttocap = $this->toUserAmount($resttocap, $currency);
 			$html .= '<form action="'.$url.'" method="post" name="capture-cancel">';
 			$html .= '<input type="hidden" name="qp_count" value="'.$qp_count.'" />';
 			$html .= '<b>'.$this->l('Amount to capture:').'</b>';
@@ -1480,6 +1561,7 @@ class QuickPay extends PaymentModule
 		}
 		if ($resttoref > 0)
 		{
+			$resttoref = $this->toUserAmount($resttoref, $currency);
 			$html .= '<form action="'.$url.'" method="post" name="capture-cancel">';
 			$html .= '<input type="hidden" name="qp_count" value="'.$qp_count.'" />';
 			$html .= '<b>'.$this->l('Amount to refund').' ('.$resttoref.'):</b>';
@@ -1649,6 +1731,12 @@ class QuickPay extends PaymentModule
 				}
 			}
 			$vars = $vars[0];
+			if (empty($vars->id))
+			{
+				$msg = 'QuickPay: Payment error: '.$saved_vars->message;
+				Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+				die($saved_vars->message);
+			}
 		}
 		$values = array($id_cart, $vars->id, $vars->order_id, 0, 0, pSql($json));
 		Db::getInstance()->Execute(
@@ -1750,6 +1838,16 @@ class QuickPay extends PaymentModule
 			$currency = new Currency((int)$cart->id_currency);
 			Context::getContext()->currency = $currency;
 		}
+		$trans = Db::getInstance()->getRow('SELECT *
+				FROM '._DB_PREFIX_.'quickpay_execution
+				WHERE `id_cart` = '.$id_cart.'
+				ORDER BY `exec_id` ASC');
+		if ($trans['accepted'])
+		{
+			$msg = 'QuickPay: Validate error. Order already accepted';
+			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+			die('Order already accepted');
+		}
 		Db::getInstance()->Execute('DELETE
 				FROM '._DB_PREFIX_.'quickpay_execution
 				WHERE `id_cart` = '.$cart->id);
@@ -1762,7 +1860,13 @@ class QuickPay extends PaymentModule
 				VALUES '.$this->group($values));
 		if ($accepted && isset($vars->operations[0]))
 		{
-			$amount = number_format($vars->operations[0]->amount / 100, 2, '.', '');
+			$decimals = $this->getDecimals($vars->currency);
+			$amount = number_format(
+					$vars->operations[0]->amount / pow(10, $decimals),
+					$decimals,
+					'.',
+					''
+				);
 			$extra_vars = array('transaction_id' => $vars->id,
 					'cardtype' => $vars->metadata->brand);
 			if ($this->setup->autofee && isset($vars->operations))
@@ -1798,6 +1902,7 @@ class QuickPay extends PaymentModule
 		if ($fee <= 0)
 			return;
 		$product->name = array($def_lang => $txt);
+		$product->active = 0;
 		$product->price = $fee;
 		$product->quantity = 100;
 		$product->link_rewrite = array($def_lang => 'fee');
