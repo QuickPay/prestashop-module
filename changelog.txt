@@ -45,3 +45,8 @@ Version 4.0.24
 Reject validation if payment has already been accepted.
 Added extra check for failed payment.
 Added facilitator to payment status (e.g. MobilePay).
+Version 4.0.24b
+2016-04-14 2016-06-09
+Fixed payment fee in combination with cart rule.
+Handle general cURL error.
+Changed text for combined 3D credit cards.

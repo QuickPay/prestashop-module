@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/04/18 07:13:11 $
+*  $Date: 2016/06/08 17:59:24 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.24';
+		$this->version = '4.0.24b';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -774,6 +774,8 @@ class QuickPay extends PaymentModule
 	{
 		$ch = $this->getCurlHandle($resource, $fields, $method);
 		$data = curl_exec($ch);
+		if (!$data)
+			$this->qpError = curl_error($ch);
 		curl_close($ch);
 		return $data;
 	}
@@ -1733,9 +1735,12 @@ class QuickPay extends PaymentModule
 			$vars = $vars[0];
 			if (empty($vars->id))
 			{
-				$msg = 'QuickPay: Payment error: '.$saved_vars->message;
+				if (empty($this->qpError))
+					$msg = 'QuickPay: Payment error: '.$saved_vars->message;
+				else
+					$msg = 'QuickPay: cURL error: '.$this->qpError;
 				Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
-				die($saved_vars->message);
+				die($msg);
 			}
 		}
 		$values = array($id_cart, $vars->id, $vars->order_id, 0, 0, pSql($json));
@@ -1899,6 +1904,8 @@ class QuickPay extends PaymentModule
 		else
 			$product = new Product();
 		$fee = $amount - $cart->getOrderTotal(true);
+		if ($this->v15)
+			$cacheEntries = Cache::retrieveAll();
 		if ($fee <= 0)
 			return;
 		$product->name = array($def_lang => $txt);
@@ -1935,8 +1942,16 @@ class QuickPay extends PaymentModule
 			StockAvailable::setQuantity($product->id, 0, 100);
 		}
 		$cart->updateQty(1, $product->id);
-		if ($this->v15)
+		if ($this->v15) {
+			foreach ($cacheEntries as $cache_id => $value) {
+				$entry = explode('_', $cache_id);
+				if ($entry[0] == 'getContextualValue') {
+					$cache_id .= '_'.$product->id.'_0';
+					Cache::store($cache_id, $value);
+				}
+			}
 			$cart->getPackageList(true); // Flush cache
+		}
 	}
 }
 
