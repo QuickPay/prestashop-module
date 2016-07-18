@@ -63,6 +63,7 @@ $_MODULE['<{quickpay}prestashop>quickpay_82823c23ab25d723a858aa7d742bd7b7'] = 'U
 $_MODULE['<{quickpay}prestashop>quickpay_cf8bc4d187d5758d8e4e222cee599fc2'] = 'Kunne ikke få adgang til gebyrer via bruger-nøgle. Tjek adgangsrettigheder på';
 $_MODULE['<{quickpay}prestashop>quickpay_08b0f5afd8b9af805888eaa2e9b14c61'] = 'Kunne ikke få adgang til betalinger via bruger-nøgle. Tjek adgangsrettigheder på';
 $_MODULE['<{quickpay}prestashop>quickpay_d83d5aa5c718fef1f06fb86c00eeb381'] = 'kreditkort';
+$_MODULE['<{quickpay}prestashop>quickpay_78e3d223f3c6866a2cda1907a609f1f8'] = 'Gebyr bliver inkluderet i betalingsvinduet';
 $_MODULE['<{quickpay}prestashop>quickpay_fefcd86b8634b763c283327431df7f3e'] = 'Gebyr for';
 $_MODULE['<{quickpay}prestashop>quickpay_b294d0df04c6d0d0d30c5e3b48c0fa09'] = 'ViaBill';
 $_MODULE['<{quickpay}prestashop>quickpay_684a72e08f24f55b1138edd5a7c2b53e'] = 'udenlandsk';

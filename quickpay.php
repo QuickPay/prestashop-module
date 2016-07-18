@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/06/17 06:04:57 $
+*  $Date: 2016/07/16 05:41:22 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.25';
+		$this->version = '4.0.25c';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -775,7 +775,7 @@ class QuickPay extends PaymentModule
 		$ch = $this->getCurlHandle($resource, $fields, $method);
 		$data = curl_exec($ch);
 		if (!$data)
-			$this->qpError = curl_error($ch);
+			$this->qp_error = curl_error($ch);
 		curl_close($ch);
 		return $data;
 	}
@@ -1118,6 +1118,13 @@ class QuickPay extends PaymentModule
 					if ($setup->combine &&
 							($card_name == 'visa_3d' || $card_name == 'mastercard_3d'))
 						continue;
+					if ($autofee && $card_name == 'mobilepay')
+					{
+						$fee_text['name'] = $this->l('Fee will be included in the payment window').
+						$fee_text['amount'] = '';
+						$fee_texts[] = $fee_text;
+						continue;
+					}
 					if (!empty($fees[$card_name]))
 					{
 						$fee_text = array();
@@ -1665,11 +1672,11 @@ class QuickPay extends PaymentModule
 			if ($trans)
 			{
 				$vars = $this->jsonDecode($trans['json']);
-				if (isset($vars->operations))
+				$amount = $this->getAmount($vars);
+				if ($amount)
 				{
 					$amountex = explode('.', $order->total_paid);
 					$amount_order = $amountex[0].$amountex[1];
-					$amount = $vars->operations[0]->amount;
 					if ($amount > $amount_order)
 						$amount = $amount_order;
 					$fields = array('amount='.$amount);
@@ -1735,10 +1742,10 @@ class QuickPay extends PaymentModule
 			$vars = $vars[0];
 			if (empty($vars->id))
 			{
-				if (empty($this->qpError))
+				if (empty($this->qp_error))
 					$msg = 'QuickPay: Payment error: '.$saved_vars->message;
 				else
-					$msg = 'QuickPay: cURL error: '.$this->qpError;
+					$msg = 'QuickPay: cURL error: '.$this->qp_error;
 				Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
 				die($msg);
 			}
@@ -1863,11 +1870,12 @@ class QuickPay extends PaymentModule
 				'INSERT INTO '._DB_PREFIX_.'quickpay_execution
 				(`id_cart`, `trans_id`, `order_id`, `accepted`, `test_mode`, `json`)
 				VALUES '.$this->group($values));
-		if ($accepted && isset($vars->operations[0]))
+		$amount = $this->getAmount($vars);
+		if ($accepted && $amount)
 		{
 			$decimals = $this->getDecimals($vars->currency);
 			$amount = number_format(
-					$vars->operations[0]->amount / pow(10, $decimals),
+					$amount / pow(10, $decimals),
 					$decimals,
 					'.',
 					''
@@ -1885,6 +1893,18 @@ class QuickPay extends PaymentModule
 				die('Prestashop error - unable to process order..');
 			}
 		}
+	}
+
+	public function getAmount($vars)
+	{
+		$amount = NULL;
+		foreach ($vars->operations as $operation)
+		{
+			$amount = $operation->amount;
+			if ($operation->type == 'authorize')
+				break;
+		}
+		return $amount;
 	}
 
 	public function addFee(&$cart, $amount)
@@ -1905,7 +1925,7 @@ class QuickPay extends PaymentModule
 			$product = new Product();
 		$fee = $amount - $cart->getOrderTotal(true);
 		if ($this->v15)
-			$cacheEntries = Cache::retrieveAll();
+			$cache_entries = Cache::retrieveAll();
 		if ($fee <= 0)
 			return;
 		$product->name = array($def_lang => $txt);
@@ -1925,12 +1945,15 @@ class QuickPay extends PaymentModule
 			$product->id_tax_rules_group = 0;
 		else
 			$product->id_tax = 0;
-		if ($row)
-			$product->update();
-		else
-			$product->add();
 		if ($this->v15)
 		{
+			if ($row)
+				$product->update();
+			else {
+				Shop::setContext(Shop::CONTEXT_ALL, $cart->id_shop);
+				$product->add();
+				Shop::setContext(Shop::CONTEXT_SHOP, $cart->id_shop);
+			}
 			$rows = Group::getGroups($cart->id_lang);
 			foreach ($rows as $row)
 			{
@@ -1941,11 +1964,21 @@ class QuickPay extends PaymentModule
 			}
 			StockAvailable::setQuantity($product->id, 0, 100);
 		}
+		else {
+			if ($row)
+				$product->update();
+			else {
+				$product->add();
+			}
+		}
 		$cart->updateQty(1, $product->id);
-		if ($this->v15) {
-			foreach ($cacheEntries as $cache_id => $value) {
+		if ($this->v15)
+		{
+			foreach ($cache_entries as $cache_id => $value)
+			{
 				$entry = explode('_', $cache_id);
-				if ($entry[0] == 'getContextualValue') {
+				if ($entry[0] == 'getContextualValue')
+				{
 					$cache_id .= '_'.$product->id.'_0';
 					Cache::store($cache_id, $value);
 				}
