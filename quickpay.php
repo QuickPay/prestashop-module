@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/07/16 05:41:22 $
+*  $Date: 2016/07/18 06:58:30 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.25c';
+		$this->version = '4.0.25d';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -126,6 +126,7 @@ class QuickPay extends PaymentModule
 				array('_QUICKPAY_PRIVATE_KEY', 'private_key', $this->l('Quickpay private key'), '', ''),
 				array('_QUICKPAY_USER_KEY', 'user_key', $this->l('Quickpay user key'), '', ''),
 				array('_QUICKPAY_ORDER_PREFIX', 'orderprefix', $this->l('Order prefix'), '000', ''),
+				array('_QUICKPAY_STATEMENT_TEXT', 'statementtext', $this->l('Text on statement'), '', ''),
 				array('_QUICKPAY_TESTMODE', 'testmode', $this->l('Accept test payments'), 0, ''),
 				array('_QUICKPAY_COMBINE', 'combine', $this->l('Creditcards combined window'), 0, ''),
 				array('_QUICKPAY_AUTOFEE', 'autofee', $this->l('Customer pays the card fee'), 0, ''),
@@ -381,7 +382,7 @@ class QuickPay extends PaymentModule
 		$this->getSetup();
 		$this->postProcess();
 		$output .= $this->displayErrors();
-		if (!$this->post_errors)
+		if (Tools::getValue('submitQuickPayModule') && !$this->post_errors)
 			$output .= '
 				<div class="conf confirm">
 				<img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />
@@ -568,6 +569,8 @@ class QuickPay extends PaymentModule
 					'label' => $vars->card_text
 					);
 		}
+		if ($vars->var_name == 'statementtext')
+			$input['desc'] = $this->l('Max. 22 ASCII characters. Only for Clearhaus.');
 		return $input;
 	}
 
@@ -707,6 +710,13 @@ class QuickPay extends PaymentModule
 			if (Tools::strlen($setup->orderprefix) != 3)
 				$this->post_errors[] =
 					$this->l('Order prefix must be exactly 3 characters long.');
+			$txt = Tools::iconv('utf-8', 'ASCII', $setup->statementtext);
+			if ($txt != $setup->statementtext)
+				$this->post_errors[] =
+					$this->l('Statement text must be 7-bit ASCII.');
+			if (strlen($txt) > 22)
+				$this->post_errors[] =
+					$this->l('Statement text must not be longer than 22 characters.');
 			$data = $this->doCurl('payments', array(), 'POST');
 			$vars = $this->jsonDecode($data);
 			if ($vars->message == 'Invalid API key')
@@ -1175,6 +1185,7 @@ class QuickPay extends PaymentModule
 					'product_id'                   => 'P03',
 					'reference_title'              => Configuration::get('PS_SHOP_NAME'),
 					'subscription'                 => '',
+					'text_on_statement'            => $setup->statementtext,
 					'vat_amount'                   => $tax_total,
 					'version'                      => 'v10'
 						);
