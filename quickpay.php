@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/07/18 06:58:30 $
+*  $Date: 2016/07/29 08:03:02 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.25d';
+		$this->version = '4.0.25e';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -714,7 +714,7 @@ class QuickPay extends PaymentModule
 			if ($txt != $setup->statementtext)
 				$this->post_errors[] =
 					$this->l('Statement text must be 7-bit ASCII.');
-			if (strlen($txt) > 22)
+			if (Tools::strlen($txt) > 22)
 				$this->post_errors[] =
 					$this->l('Statement text must not be longer than 22 characters.');
 			$data = $this->doCurl('payments', array(), 'POST');
@@ -1130,6 +1130,7 @@ class QuickPay extends PaymentModule
 						continue;
 					if ($autofee && $card_name == 'mobilepay')
 					{
+						$fee_text = array();
 						$fee_text['name'] = $this->l('Fee will be included in the payment window').
 						$fee_text['amount'] = '';
 						$fee_texts[] = $fee_text;
@@ -1884,31 +1885,45 @@ class QuickPay extends PaymentModule
 		$amount = $this->getAmount($vars);
 		if ($accepted && $amount)
 		{
-			$decimals = $this->getDecimals($vars->currency);
-			$amount = number_format(
-					$amount / pow(10, $decimals),
-					$decimals,
-					'.',
-					''
-				);
-			$extra_vars = array('transaction_id' => $vars->id,
-					'cardtype' => $vars->metadata->brand);
-			if ($this->setup->autofee && isset($vars->operations))
-				$this->addFee($cart, $amount);
-			if (!$this->validateOrder($cart->id, $id_order_state, $amount,
-						$brand, null, $extra_vars, null, false,
-						$cart->secure_key))
+			try
 			{
-				$msg = 'QuickPay: Validate error. Unable to process order';
+				$decimals = $this->getDecimals($vars->currency);
+				$amount = number_format(
+						$amount / pow(10, $decimals),
+						$decimals,
+						'.',
+						''
+						);
+				$extra_vars = array('transaction_id' => $vars->id,
+						'cardtype' => $vars->metadata->brand);
+				if ($this->setup->autofee && isset($vars->operations))
+					$this->addFee($cart, $amount);
+				if (!$this->validateOrder($cart->id, $id_order_state, $amount,
+							$brand, null, $extra_vars, null, false,
+							$cart->secure_key))
+				{
+					$msg = 'QuickPay: Validate error. Unable to process order';
+					Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
+					die('Prestashop error - unable to process order..');
+				}
+			}
+			catch (Exception $exception)
+			{
+				Db::getInstance()->Execute(
+						'UPDATE '._DB_PREFIX_.'quickpay_execution
+						SET `accepted` = 0
+						WHERE `id_cart` = '.$id_cart);
+				$msg = 'QuickPay: Validate error. Exception ';
+				$msg .= $exception->getMessage();
 				Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
-				die('Prestashop error - unable to process order..');
+				die('Prestashop error - got exception.');
 			}
 		}
 	}
 
 	public function getAmount($vars)
 	{
-		$amount = NULL;
+		$amount = null;
 		foreach ($vars->operations as $operation)
 		{
 			$amount = $operation->amount;
@@ -1960,7 +1975,8 @@ class QuickPay extends PaymentModule
 		{
 			if ($row)
 				$product->update();
-			else {
+			else
+			{
 				Shop::setContext(Shop::CONTEXT_ALL, $cart->id_shop);
 				$product->add();
 				Shop::setContext(Shop::CONTEXT_SHOP, $cart->id_shop);
@@ -1975,12 +1991,12 @@ class QuickPay extends PaymentModule
 			}
 			StockAvailable::setQuantity($product->id, 0, 100);
 		}
-		else {
+		else
+		{
 			if ($row)
 				$product->update();
-			else {
+			else
 				$product->add();
-			}
 		}
 		$cart->updateQty(1, $product->id);
 		if ($this->v15)
