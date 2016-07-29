@@ -26,7 +26,7 @@
 
 $sql = array();
 
-$sql[] = 'CREATE TABLE '._DB_PREFIX_.'quickpay_execution (
+$sql[] = 'CREATE TABLE IF NOT EXISTS '._DB_PREFIX_.'quickpay_execution (
 		`exec_id` INT(6) NOT NULL AUTO_INCREMENT,
 		`id_cart` INT(10),
 		`trans_id` INT(10),
