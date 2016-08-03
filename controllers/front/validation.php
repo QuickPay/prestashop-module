@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2016/06/25 06:44:19 $
+ *  $Date: 2016/08/02 18:56:28 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -19,7 +19,7 @@ class QuickPayValidationModuleFrontController extends ModuleFrontController
 	{
 		$json = Tools::file_get_contents('php://input');
 		if (!$json)
-			$json = $HTTP_RAW_POST_DATA;
+			$json = $GLOBALS['HTTP_RAW_POST_DATA']; // Deprecated since PHP 5.6
 		$checksum = $_SERVER['HTTP_QUICKPAY_CHECKSUM_SHA256'];
 
 		$quickpay = new Quickpay();
