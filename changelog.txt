@@ -50,3 +50,15 @@ Version 4.0.25
 Fixed payment fee in combination with cart rule.
 Handle general cURL error.
 Changed text for combined 3D credit cards.
+Version 4.0.26
+2016-06-18 2016-08-03
+Fixed date format for PrestaShop 1.4.
+Make sure that language file is copied for PrestaShop 1.4.
+Use QuickPay table to check for validated order.
+Catch exceptions in validation.
+Added support for Clearhaus text on statement.
+Product for fee must be visible in all stores.
+Handle fees for MobilePay properly.
+Use HTTP_RAW_POST_DATA if php://input is empty.
+Only create table if it does not exist.
+Ignore already processed payments in callback.
