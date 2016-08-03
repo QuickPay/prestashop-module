@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/07/29 21:22:28 $
+*  $Date: 2016/08/03 05:05:14 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.25f';
+		$this->version = '4.0.26';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -74,14 +74,21 @@ class QuickPay extends PaymentModule
 		return $vars;
 	}
 
+	public function checkLangFile()
+	{
+		if (isset($this->back_file))
+		{
+			$src = Tools::file_get_contents($this->local_path.'translations/da.php');
+			$dst = Tools::file_get_contents($this->local_path.'da.php');
+			if ($src != $dst)
+				file_put_contents($this->local_path.'da.php', $src);
+		}
+	}
+
 	public function install()
 	{
 		include(dirname(__FILE__).'/sql/install.php');
-		if (isset($this->back_file))
-		{
-			$data = Tools::file_get_contents($this->local_path.'translations/da.php');
-			file_put_contents($this->local_path.'da.php', $data);
-		}
+		$this->checkLangFile();
 
 		if (!parent::install())
 			return false;
@@ -93,7 +100,7 @@ class QuickPay extends PaymentModule
 				return false;
 		}
 		return $this->registerHook('payment') &&
-			$this->registerHook('paymentTop') &&
+			$this->registerHook('header') &&
 			$this->registerHook('leftColumn') &&
 			$this->registerHook('footer') &&
 			$this->registerHook('adminOrder') &&
@@ -345,6 +352,7 @@ class QuickPay extends PaymentModule
 	 */
 	public function getContent()
 	{
+		$this->checkLangFile();
 		if (isset($this->warning))
 			return $this->displayError($this->warning);
 
@@ -368,8 +376,10 @@ class QuickPay extends PaymentModule
 			$this->install();
 		if ($this->v15)
 		{
-			if (!$this->isRegisteredInHook(Hook::getIdByName('paymentTop')))
-				$this->registerHook('paymentTop');
+			if ($this->isRegisteredInHook(Hook::getIdByName('paymentTop')))
+				$this->unRegisterHook('paymentTop');
+			if (!$this->isRegisteredInHook(Hook::getIdByName('header')))
+				$this->registerHook('header');
 			$this->context->controller->addJqueryUI('ui.sortable');
 		}
 		else
@@ -1000,12 +1010,17 @@ class QuickPay extends PaymentModule
 		return $amount;
 	}
 
-	public function hookPaymentTop()
+	public function hookHeader()
 	{
 		if ($this->v16)
 			$this->context->controller->addCSS($this->_path.'/views/css/front.css');
 		else
 			$this->context->controller->addCSS($this->_path.'/views/css/front15.css');
+	}
+
+	public function hookPaymentTop()
+	{
+		$this->hookHeader();
 	}
 
 	public function hookPayment($params)
@@ -1462,7 +1477,8 @@ class QuickPay extends PaymentModule
 		$html .= $this->l('Created:');
 		$html .= '</th><td>';
 		$html .= Tools::displayDate(date('Y-m-d H:i:s',
-					strtotime($vars->created_at)), null, true);
+					strtotime($vars->created_at)),
+					$this->context->language->id, true);
 		$html .= '</td></tr>';
 
 		if ($vars->metadata->fraud_suspected)
@@ -1500,7 +1516,8 @@ class QuickPay extends PaymentModule
 		{
 			$html .= '<tr><td>';
 			$html .= Tools::displayDate(date('Y-m-d H:i:s',
-						strtotime($operation->created_at)), null, true);
+						strtotime($operation->created_at)),
+						$this->context->language->id, true);
 			$html .= '</td><td>';
 			switch ($operation->type)
 			{
@@ -1849,11 +1866,7 @@ class QuickPay extends PaymentModule
 			die('Not a valid cart');
 		}
 		if ($cart->OrderExists() != 0)
-		{
-			$msg = 'QuickPay: Validate error. Order already exists';
-			Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
 			die('Order already exists');
-		}
 		if ($this->v15)
 		{
 			Shop::setContext(Shop::CONTEXT_SHOP, $cart->id_shop);
