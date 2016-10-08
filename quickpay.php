@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/10/08 05:13:09 $
+*  $Date: 2016/10/08 05:32:15 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -1955,6 +1955,7 @@ class QuickPay extends PaymentModule
 				WHERE `name` = "'.$txt.'"');
 		if ($row)
 		{
+			SpecificPrice::deleteByProductId($row['id_product']);
 			$product = new Product($row['id_product']);
 			$cart->deleteProduct($row['id_product']);
 		}
