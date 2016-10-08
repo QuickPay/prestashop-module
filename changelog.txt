@@ -62,3 +62,7 @@ Handle fees for MobilePay properly.
 Use HTTP_RAW_POST_DATA if php://input is empty.
 Only create table if it does not exist.
 Ignore already processed payments in callback.
+Version 4.0.27
+2016-08-04 2016-10-09
+Removed eDankort.
+Fixed fee calculation when discount is added for PrestaShop 1.6.1.4 and later.

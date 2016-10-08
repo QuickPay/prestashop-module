@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/08/03 05:05:14 $
+*  $Date: 2016/10/08 05:13:09 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.26';
+		$this->version = '4.0.27';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -145,7 +145,6 @@ class QuickPay extends PaymentModule
 				array('_QUICKPAY_BRANDING', 'branding', $this->l('Branding in payment window'), 0, ''),
 				array('_QUICKPAY_VIABILL', 'viabill', $this->l('ViaBill - buy now, pay whenever you want'), 0, 'viabill'),
 				array('_QUICKPAY_DK', 'dk', $this->l('Dankort'), 0, 'dankort'),
-				array('_QUICKPAY_EDK', 'edk', $this->l('eDankort'), 0, 'edankort'),
 				array('_QUICKPAY_VISA', 'visa', $this->l('Visa card'), 0, 'visa,visa-dk'),
 				array('_QUICKPAY_VELECTRON', 'visaelectron', $this->l('Visa Electron'), 0, 'visa-electron,visa-electron-dk'),
 				array('_QUICKPAY_MASTERCARD', 'mastercard', $this->l('MasterCard'), 0, 'mastercard,mastercard-dk'),
@@ -178,7 +177,6 @@ class QuickPay extends PaymentModule
 		$this->setup->credit_cards3di = array();
 		$credit_cards = array(
 				'dk',
-				'edk',
 				'visa',
 				'visaelectron',
 				'express',
@@ -2020,6 +2018,8 @@ class QuickPay extends PaymentModule
 				if ($entry[0] == 'getContextualValue')
 				{
 					$cache_id .= '_'.$product->id.'_0';
+					Cache::store($cache_id, $value);
+					$cache_id .= '_1';
 					Cache::store($cache_id, $value);
 				}
 			}
