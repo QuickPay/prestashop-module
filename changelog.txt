@@ -67,3 +67,6 @@ Version 4.0.27
 Removed eDankort.
 Fixed fee calculation when discount is added for PrestaShop 1.6.1.4 and later.
 Remove discounts from fee product.
+Version 4.0.28
+2016-10-09 2016-10-15
+Added Swipp.

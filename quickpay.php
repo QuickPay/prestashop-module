@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/10/08 05:32:15 $
+*  $Date: 2016/10/14 18:54:13 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -27,7 +27,7 @@ class QuickPay extends PaymentModule
 	{
 		$this->name = 'quickpay';
 		$this->tab = 'payments_gateways';
-		$this->version = '4.0.27';
+		$this->version = '4.0.28';
 		$this->v14 = _PS_VERSION_ >= '1.4.1.0';
 		$this->v15 = _PS_VERSION_ >= '1.5.0.0';
 		$this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -151,6 +151,7 @@ class QuickPay extends PaymentModule
 				array('_QUICKPAY_MASTERCARDDEBET', 'mastercarddebet', $this->l('MasterCard Debet'), 0, 'mastercard-debet-dk'),
 				array('_QUICKPAY_A_EXPRESS', 'express', $this->l('American Express'), 0, 'american-express,american-express-dk'),
 				array('_QUICKPAY_MOBILEPAY', 'mobilepay', $this->l('MobilePay'), 0, 'mobilepay'),
+				array('_QUICKPAY_SWIPP', 'swipp', $this->l('Swipp'), 0, 'swipp'),
 				array('_QUICKPAY_FORBRUGS_1886', 'f1886', $this->l('Forbrugsforeningen af 1886'), 0, 'fbg1886'),
 				array('_QUICKPAY_DINERS', 'diners', $this->l('Diners Club'), 0, 'diners,diners-dk'),
 				array('_QUICKPAY_JCB', 'jcb', $this->l('JCB'), 0, 'jcb'),
@@ -164,7 +165,6 @@ class QuickPay extends PaymentModule
 				array('_QUICKPAY_DANSKE', 'danske', $this->l('Danske'), 0, 'danske-dk'),
 				array('_QUICKPAY_NORDEA', 'nordea', $this->l('Nordea'), 0, 'nordea-dk'),
 				array('_QUICKPAY_PAYPAL', 'paypal', $this->l('PayPal'), 0, 'paypal'),
-				array('_QUICKPAY_PAII', 'paii', $this->l('Paii'), 0, 'paii'),
 				array('_QUICKPAY_SOFORT', 'sofort', $this->l('Sofort'), 0, 'sofort'));
 		$this->setup = new StdClass();
 		$this->setup->lock_names = array();
@@ -1114,6 +1114,8 @@ class QuickPay extends PaymentModule
 			}
 			if ($vars->var_name == 'mobilepay' && $country->iso_code != 'DK')
 					continue;
+			if ($vars->var_name == 'swipp' && $country->iso_code != 'DK')
+					continue;
 			if ($vars->var_name == 'viabill')
 			{
 				// Autofee does not work
@@ -1650,7 +1652,7 @@ class QuickPay extends PaymentModule
 				$html = '<table><tr>';
 				$html .= '<td style="width:100%; text-align:right">Quickpay transaction ID: '.$trans['trans_id'].'</td>';
 				$html .= '</tr></table>';
-				if ($vars->acquirer == 'viabill')
+				if (isset($vars->acquirer) && $vars->acquirer == 'viabill')
 				{
 					$html .= '<br/>';
 					$html .= 'Det skyldige beløb kan alene betales med frigørende virkning til ViaBill, som fremsender særskilt opkrævning.';
@@ -1669,7 +1671,7 @@ class QuickPay extends PaymentModule
 				$new_str = Tools::iconv('utf-8', $encoding,
 						$order->payment.' TransID: '.$trans['trans_id']);
 				$pdf->pages[1] = str_replace($old_str, $new_str, $pdf->pages[1]);
-				if ($vars->acquirer == 'viabill')
+				if (isset($vars->acquirer) && $vars->acquirer == 'viabill')
 				{
 					$pdf->Ln(14);
 					$width = 165;
