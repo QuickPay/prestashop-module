@@ -70,3 +70,12 @@ Remove discounts from fee product.
 Version 4.0.28
 2016-10-09 2016-10-15
 Added Swipp.
+Version 4.0.29
+2016-10-15 2016-12-09
+Validator changes.
+Removed support for SWIPP.
+Added fraud remark.
+Fixed problem in PrestaShop 1.7 where the smarty function "displayPrice" is missing.
+First version for PrestaShop 1.7.
+Fixed PHP notifications.
+Inhibit the log message: "Frontcontroller::init - Cart cannot be loaded or an order has already been placed using this cart" when order is complete.
