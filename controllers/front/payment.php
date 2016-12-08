@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2015/08/16 15:11:48 $
+ *  $Date: 2016/11/12 20:35:49 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -15,9 +15,9 @@
  */
 class QuickPayPaymentModuleFrontController extends ModuleFrontController
 {
-	public function postProcess()
-	{
-		$quickpay = new Quickpay();
-		$quickpay->payment();
-	}
+    public function postProcess()
+    {
+        $quickpay = new Quickpay();
+        $quickpay->payment();
+    }
 }
