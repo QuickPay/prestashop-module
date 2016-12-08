@@ -27,17 +27,19 @@
 $sql = array();
 
 $sql[] = 'CREATE TABLE IF NOT EXISTS '._DB_PREFIX_.'quickpay_execution (
-		`exec_id` INT(6) NOT NULL AUTO_INCREMENT,
-		`id_cart` INT(10),
-		`trans_id` INT(10),
-		`order_id` VARCHAR(25),
-		`accepted` INT(1),
-		`test_mode` INT(1),
-		`json` TEXT,
-		PRIMARY KEY(`exec_id`)
+    `exec_id` INT(6) NOT NULL AUTO_INCREMENT,
+    `id_cart` INT(10),
+    `trans_id` INT(10),
+    `order_id` VARCHAR(25),
+    `accepted` INT(1),
+    `test_mode` INT(1),
+    `json` TEXT,
+    PRIMARY KEY(`exec_id`)
 ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8;';
 
 
-foreach ($sql as $query)
-	if (Db::getInstance()->execute($query) == false)
-		return false;
+foreach ($sql as $query) {
+    if (Db::getInstance()->execute($query) == false) {
+        return false;
+    }
+}
