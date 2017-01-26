@@ -79,3 +79,10 @@ Fixed problem in PrestaShop 1.7 where the smarty function "displayPrice" is miss
 First version for PrestaShop 1.7.
 Fixed PHP notifications.
 Inhibit the log message: "Frontcontroller::init - Cart cannot be loaded or an order has already been placed using this cart" when order is complete.
+Version 4.0.30
+2016-12-09 2016-12-25
+Cast IDs to int for improved security.
+Updated Mastercard 3d image.
+Version 4.0.31
+2016-12-25 2017-01-27
+Fixed bug for order numbers with non-numerical prefix.

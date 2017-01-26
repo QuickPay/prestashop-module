@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2016/12/08 20:58:11 $
+*  $Date: 2017/01/26 18:31:35 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.29';
+        $this->version = '4.0.31';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -1853,7 +1853,7 @@ class QuickPay extends PaymentModule
     {
         $this->getSetup();
         $fields = array();
-        $id_option = Tools::getValue('option');
+        $id_option = (int)Tools::getValue('option');
         $order_id = Tools::getValue('order_id');
         $id_cart = (int)Tools::substr($order_id, 3);
         $cart = new Cart($id_cart);

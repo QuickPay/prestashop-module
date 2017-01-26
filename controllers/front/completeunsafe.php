@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2016/11/12 20:35:49 $
+ *  $Date: 2016/12/24 07:34:11 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -25,8 +25,8 @@ class QuickPayCompleteUnsafeModuleFrontController extends ModuleFrontController
     {
         parent::initContent();
 
-        $id_cart = Tools::getValue('id_cart');
-        $id_module = Tools::getValue('id_module');
+        $id_cart = (int)Tools::getValue('id_cart');
+        $id_module = (int)Tools::getValue('id_module');
         $key = Tools::getValue('key');
         for ($i = 0; $i < 10; $i++) {
             $trans = Db::getInstance()->getRow('SELECT *
