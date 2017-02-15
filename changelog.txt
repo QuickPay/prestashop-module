@@ -86,3 +86,6 @@ Updated Mastercard 3d image.
 Version 4.0.31
 2016-12-25 2017-01-27
 Fixed bug for order numbers with non-numerical prefix.
+Version 4.0.32
+2016-01-27 2017-02-16
+Added selection for fee tax.

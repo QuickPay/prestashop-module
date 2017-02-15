@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2017/01/26 18:31:35 $
+*  $Date: 2017/02/15 07:20:29 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.31';
+        $this->version = '4.0.32';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -155,6 +155,8 @@ class QuickPay extends PaymentModule
                     $this->l('Capture payments in state'), 0, ''),
             array('_QUICKPAY_BRANDING', 'branding',
                     $this->l('Branding in payment window'), 0, ''),
+            array('_QUICKPAY_FEE_TAX', 'feetax',
+                    $this->l('Tax for card fee'), 0, ''),
             array('_QUICKPAY_VIABILL', 'viabill',
                     $this->l('ViaBill - buy now, pay whenever you want'), 0, 'viabill'),
             array('_QUICKPAY_DK', 'dk',
@@ -551,7 +553,8 @@ class QuickPay extends PaymentModule
         return $vars->def_val !== '' &&
             $vars->var_name != 'orderprefix' &&
             $vars->var_name != 'statecapture' &&
-            $vars->var_name != 'branding';
+            $vars->var_name != 'branding' &&
+            $vars->var_name != 'feetax';
     }
 
     protected function getConfigInput15($vars)
@@ -675,6 +678,33 @@ class QuickPay extends PaymentModule
         return $input;
     }
 
+    protected function getFeeTaxInput($vars)
+    {
+        $taxes = array(0 => $this->l('None'));
+        $rows = TaxRulesGroup::getTaxRulesGroups();
+        foreach ($rows as $row) {
+            $taxes[$row['id_tax_rules_group']] = $row['name'];
+        }
+        $query = array();
+        foreach ($taxes as $id => $name) {
+            $query[] = array(
+                    'id' => $id,
+                    'name' => $name
+                    );
+        }
+        $input = array(
+                'type' => 'select',
+                'name' => $vars->glob_name,
+                'label' => $vars->card_text,
+                'options' => array(
+                    'query' =>  $query,
+                    'id' => 'id',
+                    'name' => 'name'
+                    )
+                );
+        return $input;
+    }
+
     protected function getConfigSettings()
     {
         $inputs = array();
@@ -689,6 +719,10 @@ class QuickPay extends PaymentModule
             }
             if ($vars->var_name == 'branding') {
                 $inputs[] = $this->getBrandingInput($vars);
+                continue;
+            }
+            if ($vars->var_name == 'feetax') {
+                $inputs[] = $this->getFeeTaxInput($vars);
                 continue;
             }
             $inputs[] = $this->getConfigInput($vars);
@@ -1779,11 +1813,7 @@ class QuickPay extends PaymentModule
                 }
                 return $html;
             } else {
-                if ($this->v14) {
-                    $encoding = $pdf->encoding();
-                } else {
-                    $encoding = 'iso-8859-1';
-                }
+                $encoding = $pdf->encoding();
                 $old_str = Tools::iconv('utf-8', $encoding, $order->payment);
                 $new_str = Tools::iconv(
                     'utf-8',
@@ -2124,15 +2154,20 @@ class QuickPay extends PaymentModule
         if ($currency->id != $id_currency && $currency->conversion_rate) {
             $product->price /= $currency->conversion_rate;
         }
-        $product->price = Tools::ps_round($product->price, 6);
         if ($this->v15) {
             $product->is_virtual = 1;
         }
-        if ($this->v14) {
-            $product->id_tax_rules_group = 0;
-        } else {
-            $product->id_tax = 0;
+        $product->id_tax_rules_group = $this->setup->feetax;
+        if ($product->id_tax_rules_group) {
+            $address = new Address($cart->id_address_delivery);
+            $tax_manager = TaxManagerFactory::getManager($address, $product->id_tax_rules_group);
+            $tax_calculator = $tax_manager->getTaxCalculator();
+            $tax_rate = $tax_calculator->getTotalRate();
+            if ($tax_rate) {
+                $product->price /= (1 + $tax_rate / 100);
+            }
         }
+        $product->price = Tools::ps_round($product->price, 6);
         if ($this->v15) {
             if ($row) {
                 $product->update();
