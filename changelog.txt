@@ -89,3 +89,8 @@ Fixed bug for order numbers with non-numerical prefix.
 Version 4.0.32
 2016-01-27 2017-02-16
 Added selection for fee tax.
+Version 4.0.33
+2017-02-16 2017-03-19
+Added extra information (order ID/reference etc.).
+Fixed amount for payments with failed attempts.
+Fixed problem with discounts when fee had been added.

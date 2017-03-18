@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2017/02/15 07:20:29 $
+*  $Date: 2017/03/18 08:04:33 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.32';
+        $this->version = '4.0.33';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -1013,39 +1013,114 @@ class QuickPay extends PaymentModule
         return $ordering_list;
     }
 
+    public function getIso3($iso_code)
+    {
+        $iso3 = array(
+            'AF' => 'AFG', 'AX' => 'ALA', 'AL' => 'ALB', 'DZ' => 'DZA',
+            'AS' => 'ASM', 'AD' => 'AND', 'AO' => 'AGO', 'AI' => 'AIA',
+            'AQ' => 'ATA', 'AG' => 'ATG', 'AR' => 'ARG', 'AM' => 'ARM',
+            'AW' => 'ABW', 'AU' => 'AUS', 'AT' => 'AUT', 'AZ' => 'AZE',
+            'BS' => 'BHS', 'BH' => 'BHR', 'BD' => 'BGD', 'BB' => 'BRB',
+            'BY' => 'BLR', 'BE' => 'BEL', 'BZ' => 'BLZ', 'BJ' => 'BEN',
+            'BM' => 'BMU', 'BT' => 'BTN', 'BO' => 'BOL', 'BQ' => 'BES',
+            'BA' => 'BIH', 'BW' => 'BWA', 'BV' => 'BVT', 'BR' => 'BRA',
+            'IO' => 'IOT', 'BN' => 'BRN', 'BG' => 'BGR', 'BF' => 'BFA',
+            'BI' => 'BDI', 'CV' => 'CPV', 'KH' => 'KHM', 'CM' => 'CMR',
+            'CA' => 'CAN', 'KY' => 'CYM', 'CF' => 'CAF', 'TD' => 'TCD',
+            'CL' => 'CHL', 'CN' => 'CHN', 'CX' => 'CXR', 'CC' => 'CCK',
+            'CO' => 'COL', 'KM' => 'COM', 'CG' => 'COG', 'CD' => 'COD',
+            'CK' => 'COK', 'CR' => 'CRI', 'CI' => 'CIV', 'HR' => 'HRV',
+            'CU' => 'CUB', 'CW' => 'CUW', 'CY' => 'CYP', 'CZ' => 'CZE',
+            'DK' => 'DNK', 'DJ' => 'DJI', 'DM' => 'DMA', 'DO' => 'DOM',
+            'EC' => 'ECU', 'EG' => 'EGY', 'SV' => 'SLV', 'GQ' => 'GNQ',
+            'ER' => 'ERI', 'EE' => 'EST', 'ET' => 'ETH', 'FK' => 'FLK',
+            'FO' => 'FRO', 'FJ' => 'FJI', 'FI' => 'FIN', 'FR' => 'FRA',
+            'GF' => 'GUF', 'PF' => 'PYF', 'TF' => 'ATF', 'GA' => 'GAB',
+            'GM' => 'GMB', 'GE' => 'GEO', 'DE' => 'DEU', 'GH' => 'GHA',
+            'GI' => 'GIB', 'GR' => 'GRC', 'GL' => 'GRL', 'GD' => 'GRD',
+            'GP' => 'GLP', 'GU' => 'GUM', 'GT' => 'GTM', 'GG' => 'GGY',
+            'GN' => 'GIN', 'GW' => 'GNB', 'GY' => 'GUY', 'HT' => 'HTI',
+            'HM' => 'HMD', 'VA' => 'VAT', 'HN' => 'HND', 'HK' => 'HKG',
+            'HU' => 'HUN', 'IS' => 'ISL', 'IN' => 'IND', 'ID' => 'IDN',
+            'IR' => 'IRN', 'IQ' => 'IRQ', 'IE' => 'IRL', 'IM' => 'IMN',
+            'IL' => 'ISR', 'IT' => 'ITA', 'JM' => 'JAM', 'JP' => 'JPN',
+            'JE' => 'JEY', 'JO' => 'JOR', 'KZ' => 'KAZ', 'KE' => 'KEN',
+            'KI' => 'KIR', 'KP' => 'PRK', 'KR' => 'KOR', 'KW' => 'KWT',
+            'KG' => 'KGZ', 'LA' => 'LAO', 'LV' => 'LVA', 'LB' => 'LBN',
+            'LS' => 'LSO', 'LR' => 'LBR', 'LY' => 'LBY', 'LI' => 'LIE',
+            'LT' => 'LTU', 'LU' => 'LUX', 'MO' => 'MAC', 'MK' => 'MKD',
+            'MG' => 'MDG', 'MW' => 'MWI', 'MY' => 'MYS', 'MV' => 'MDV',
+            'ML' => 'MLI', 'MT' => 'MLT', 'MH' => 'MHL', 'MQ' => 'MTQ',
+            'MR' => 'MRT', 'MU' => 'MUS', 'YT' => 'MYT', 'MX' => 'MEX',
+            'FM' => 'FSM', 'MD' => 'MDA', 'MC' => 'MCO', 'MN' => 'MNG',
+            'ME' => 'MNE', 'MS' => 'MSR', 'MA' => 'MAR', 'MZ' => 'MOZ',
+            'MM' => 'MMR', 'NA' => 'NAM', 'NR' => 'NRU', 'NP' => 'NPL',
+            'NL' => 'NLD', 'NC' => 'NCL', 'NZ' => 'NZL', 'NI' => 'NIC',
+            'NE' => 'NER', 'NG' => 'NGA', 'NU' => 'NIU', 'NF' => 'NFK',
+            'MP' => 'MNP', 'NO' => 'NOR', 'OM' => 'OMN', 'PK' => 'PAK',
+            'PW' => 'PLW', 'PS' => 'PSE', 'PA' => 'PAN', 'PG' => 'PNG',
+            'PY' => 'PRY', 'PE' => 'PER', 'PH' => 'PHL', 'PN' => 'PCN',
+            'PL' => 'POL', 'PT' => 'PRT', 'PR' => 'PRI', 'QA' => 'QAT',
+            'RE' => 'REU', 'RO' => 'ROU', 'RU' => 'RUS', 'RW' => 'RWA',
+            'BL' => 'BLM', 'SH' => 'SHN', 'KN' => 'KNA', 'LC' => 'LCA',
+            'MF' => 'MAF', 'PM' => 'SPM', 'VC' => 'VCT', 'WS' => 'WSM',
+            'SM' => 'SMR', 'ST' => 'STP', 'SA' => 'SAU', 'SN' => 'SEN',
+            'RS' => 'SRB', 'SC' => 'SYC', 'SL' => 'SLE', 'SG' => 'SGP',
+            'SX' => 'SXM', 'SK' => 'SVK', 'SI' => 'SVN', 'SB' => 'SLB',
+            'SO' => 'SOM', 'ZA' => 'ZAF', 'GS' => 'SGS', 'SS' => 'SSD',
+            'ES' => 'ESP', 'LK' => 'LKA', 'SD' => 'SDN', 'SR' => 'SUR',
+            'SJ' => 'SJM', 'SZ' => 'SWZ', 'SE' => 'SWE', 'CH' => 'CHE',
+            'SY' => 'SYR', 'TW' => 'TWN', 'TJ' => 'TJK', 'TZ' => 'TZA',
+            'TH' => 'THA', 'TL' => 'TLS', 'TG' => 'TGO', 'TK' => 'TKL',
+            'TO' => 'TON', 'TT' => 'TTO', 'TN' => 'TUN', 'TR' => 'TUR',
+            'TM' => 'TKM', 'TC' => 'TCA', 'TV' => 'TUV', 'UG' => 'UGA',
+            'UA' => 'UKR', 'AE' => 'ARE', 'GB' => 'GBR', 'UM' => 'UMI',
+            'US' => 'USA', 'UY' => 'URY', 'UZ' => 'UZB', 'VU' => 'VUT',
+            'VE' => 'VEN', 'VN' => 'VNM', 'VG' => 'VGB', 'VI' => 'VIR',
+            'WF' => 'WLF', 'EH' => 'ESH', 'YE' => 'YEM', 'ZM' => 'ZMB',
+            'ZW' => 'ZWE',
+        );
+        if (isset($iso3[$iso_code])) {
+            return $iso3[$iso_code];
+        } else {
+            return $iso_code;
+        }
+    }
+
     public function getDecimals($iso_code)
     {
+        $iso_code = $this->getIso3($iso_code);
         $decimals = array(
-                'BHD' => 3,
-                'BIF' => 0,
-                'BYR' => 0,
-                'CLF' => 4,
-                'CLP' => 0,
-                'CVE' => 0,
-                'DJF' => 0,
-                'GNF' => 0,
-                'IQD' => 3,
-                'ISK' => 0,
-                'JOD' => 3,
-                'JPY' => 0,
-                'KMF' => 0,
-                'KRW' => 0,
-                'KWD' => 3,
-                'LYD' => 3,
-                'MGA' => 1,
-                'MRO' => 1,
-                'OMR' => 3,
-                'PYG' => 0,
-                'RWF' => 0,
-                'TND' => 3,
-                'UGX' => 0,
-                'UYI' => 0,
-                'VND' => 0,
-                'VUV' => 0,
-                'XAF' => 0,
-                'XOF' => 0,
-                'XPF' => 0,
-                );
+            'BHD' => 3,
+            'BIF' => 0,
+            'BYR' => 0,
+            'CLF' => 4,
+            'CLP' => 0,
+            'CVE' => 0,
+            'DJF' => 0,
+            'GNF' => 0,
+            'IQD' => 3,
+            'ISK' => 0,
+            'JOD' => 3,
+            'JPY' => 0,
+            'KMF' => 0,
+            'KRW' => 0,
+            'KWD' => 3,
+            'LYD' => 3,
+            'MGA' => 1,
+            'MRO' => 1,
+            'OMR' => 3,
+            'PYG' => 0,
+            'RWF' => 0,
+            'TND' => 3,
+            'UGX' => 0,
+            'UYI' => 0,
+            'VND' => 0,
+            'VUV' => 0,
+            'XAF' => 0,
+            'XOF' => 0,
+            'XPF' => 0,
+        );
         if (isset($decimals[$iso_code])) {
             return $decimals[$iso_code];
         }
@@ -1678,6 +1753,7 @@ class QuickPay extends PaymentModule
             switch ($operation->type) {
                 case 'capture':
                     $resttoref += $operation->amount;
+                    $resttocap -= $operation->amount;
                     $allowcancel = false;
                     $html .= $this->l('Captured');
                     break;
@@ -2101,19 +2177,54 @@ class QuickPay extends PaymentModule
                 Logger::addLog($msg, 2, 0, 'Cart', $id_cart);
                 die('Prestashop error - got exception.');
             }
+            $id_order = Order::getOrderByCartId($cart->id);
+            if ($id_order) {
+                $order = new Order($id_order);
+                $customer = new Customer($order->id_customer);
+                $invoice_address = new Address((int)$order->id_address_invoice);
+                $delivery_address = new Address((int)$order->id_address_delivery);
+                $invoice_street = $invoice_address->address1;
+                if ($invoice_address->address2) {
+                    $invoice_street .= ' '.$invoice_address->address2;
+                }
+                $country = new Country($invoice_address->id_country);
+                $invoice_country = $this->getIso3($country->iso_code);
+                $delivery_street = $delivery_address->address1;
+                if ($delivery_address->address2) {
+                    $delivery_street .= ' '.$delivery_address->address2;
+                }
+                $country = new Country($delivery_address->id_country);
+                $delivery_country = $this->getIso3($country->iso_code);
+                $fields = array(
+                    'variables[id_order]='.$order->id,
+                    'variables[reference]='.$order->reference,
+                    'invoice_address[name]='.$invoice_address->firstname.' '.$invoice_address->lastname,
+                    'invoice_address[street]='.$invoice_street,
+                    'invoice_address[city]='.$invoice_address->city,
+                    'invoice_address[zip_code]='.$invoice_address->postcode,
+                    'invoice_address[country_code]='.$invoice_country,
+                    'invoice_address[phone_number]='.$invoice_address->phone,
+                    'invoice_address[mobile_number]='.$invoice_address->phone_mobile,
+                    'invoice_address[vat_no]='.$invoice_address->vat_number,
+                    'invoice_address[email]='.$customer->email,
+                    'shipping_address[name]='.$delivery_address->firstname.' '.$delivery_address->lastname,
+                    'shipping_address[street]='.$delivery_street,
+                    'shipping_address[city]='.$delivery_address->city,
+                    'shipping_address[zip_code]='.$delivery_address->postcode,
+                    'shipping_address[country_code]='.$delivery_country,
+                    'shipping_address[phone_number]='.$delivery_address->phone,
+                    'shipping_address[mobile_number]='.$delivery_address->phone_mobile,
+                    'shipping_address[vat_no]='.$delivery_address->vat_number,
+                    'shipping_address[email]='.$customer->email,
+                );
+                $this->doCurl('payments/'.$vars->id, $fields, 'PATCH');
+            }
         }
     }
 
     public function getAmount($vars)
     {
-        $amount = null;
-        foreach ($vars->operations as $operation) {
-            $amount = $operation->amount;
-            if ($operation->type == 'authorize') {
-                break;
-            }
-        }
-        return $amount;
+        return (int)$vars->link->amount + (int)$vars->fee;
     }
 
     public function addFee(&$cart, $amount)
@@ -2196,9 +2307,16 @@ class QuickPay extends PaymentModule
             foreach ($cache_entries as $cache_id => $value) {
                 $entry = explode('_', $cache_id);
                 if ($entry[0] == 'getContextualValue') {
-                    $cache_id .= '_'.$product->id.'_0';
+                    $entry[] = $product->id;
+                    $entry[] = 0;
+                    $cache_id = implode('_', $entry);
                     Cache::store($cache_id, $value);
-                    $cache_id .= '_1';
+                    $cache_id = implode('_', $entry).'_1';
+                    Cache::store($cache_id, $value);
+                    $entry[4] = CartRule::FILTER_ACTION_ALL_NOCAP;
+                    $cache_id = implode('_', $entry);
+                    Cache::store($cache_id, $value);
+                    $cache_id = implode('_', $entry).'_1';
                     Cache::store($cache_id, $value);
                 }
             }
