@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2016/12/24 07:34:11 $
+ *  $Date: 2017/08/05 06:49:04 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -57,6 +57,11 @@ class QuickPayCompleteUnsafeModuleFrontController extends ModuleFrontController
         $order = new Order((int)$id_order);
         $context = Context::getContext();
         $id_customer = $context->cookie->id_customer;
+        if (!$id_customer) {
+            $id_guest = $context->cookie->id_guest;
+            $guest = new Guest($id_guest);
+            $id_customer = $guest->id_customer;
+        }
         if (!Validate::isLoadedObject($order) ||
                 $order->id_customer != $id_customer) {
             Tools::redirect('history.php');
