@@ -94,3 +94,26 @@ Version 4.0.33
 Added extra information (order ID/reference etc.).
 Fixed amount for payments with failed attempts.
 Fixed problem with discounts when fee had been added.
+Version 4.0.34
+2017-03-19 2017-10-05
+Guests did not end up on the right completion page.
+Added Klarna.
+Fixed transfer of mobile number for MobilePay.
+Improved logo selection.
+Added support for Swish.
+Added small Maestro 3D image.
+Added Google Analytics fields.
+Added module version as payment variable.
+Removed unnecessary Paii parameters.
+Added support for basket in payment.
+Added support for Klarna.
+Fixed transfer of mobile number for MobilePay.
+Fixed autoget for card locks.
+Fixed Visa/Dankort fee for currencies that are not DKK.
+Added configuration option for visible/hidden icons.
+Added support for Swish
+Removed deprecated parameter for displayDate().
+Use fromQpAmount() and toQpAmount() for all amount conversions.
+Handle rounding problem e.g. with JPY
+Added autoget option.
+Enable MobilePay for Norway and Finland.
