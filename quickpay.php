@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2017/10/04 19:59:33 $
+*  $Date: 2017/10/05 20:26:12 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -1624,7 +1624,7 @@ class QuickPay extends PaymentModule
 
         if (isset($action_data)) {
             $vars = $this->jsonDecode($action_data);
-            if (isset($vars) && isset($vars->errors)) {
+            if (isset($vars) && isset($vars->errors) && !empty((array)$vars->errors)) {
                 if ($vars->errors->amount[0] == 'is too large') {
                     $html .= '<p class="error alert-danger">'.$this->l('Amount is too large').'</p>';
                 } else {
@@ -1770,16 +1770,16 @@ class QuickPay extends PaymentModule
                         $html .= $this->l('Waiting for approval');
                     } else {
                         if ($operation->amount > $qp_total) {
-                            $resttocap += $qp_total;
+                            $resttocap = $qp_total;
                         } else {
-                            $resttocap += $operation->amount;
+                            $resttocap = $operation->amount;
                         }
                         $html .= $this->l('Authorized');
                     }
                     break;
                 case 'refund':
                     $resttoref -= $operation->amount;
-                    $resttocap -= $operation->amount;
+                    $resttocap += $operation->amount;
                     $html .= $this->l('Refunded');
                     break;
                 case 'cancel':
