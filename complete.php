@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2017/08/05 06:49:02 $
+ *  $Date: 2017/11/12 05:14:59 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -27,14 +27,6 @@ if (!$id_module || !$key) {
 $quickpay = new Quickpay();
 $cookie = $quickpay->context->cookie;
 for ($i = 0; $i < 10; $i++) {
-    /* Wait for validation */
-    $id_order = Order::getOrderByCartId((int)$id_cart);
-    if ($id_order) {
-        break;
-    }
-    sleep(1);
-}
-if (!$id_order) {
     $trans = Db::getInstance()->getRow('SELECT *
         FROM '._DB_PREFIX_.'quickpay_execution
         WHERE `id_cart` = '.$id_cart.'
@@ -46,10 +38,15 @@ if (!$id_order) {
         $json = Tools::jsonEncode($vars);
         if ($vars->accepted == 1) {
             $checksum = $quickpay->sign($json, $setup->private_key);
-            $quickpay->validate($json, $checksum, _PS_OS_ERROR_);
+            $quickpay->validate($json, $checksum);
         }
     }
+    /* Wait for validation */
     $id_order = Order::getOrderByCartId((int)$id_cart);
+    if ($id_order) {
+        break;
+    }
+    sleep(1);
 }
 if (!$id_order) {
     Tools::redirect('history.php');

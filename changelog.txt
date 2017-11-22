@@ -117,3 +117,17 @@ Use fromQpAmount() and toQpAmount() for all amount conversions.
 Handle rounding problem e.g. with JPY
 Added autoget option.
 Enable MobilePay for Norway and Finland.
+Version 4.0.35
+2017-10-06 2017-11-12
+Set fee name for all languages.
+Set utm_nooverride in return URL.
+Use cart->id_lang instead of PS_LANG_DEFAULT in addFee().
+Version 4.0.36
+2017-10-25 2017-11-12
+Do not set basket contents when payment method is PayPal. PayPal calculates the VAT differently from PrestaShop.
+Fixed compatibility problem with very old PHP (5.4).
+Removed usage of callback.
+Show orders in back office even if quickpay table has been emptied.
+Version 4.0.37
+2017-11-22 2017-11-23
+Do not invalidate cart cache.

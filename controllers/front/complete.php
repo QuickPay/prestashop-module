@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2017/08/05 06:49:04 $
+ *  $Date: 2017/11/22 04:40:06 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -18,7 +18,6 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
     public function __construct()
     {
         parent::__construct();
-        unset($this->context->cookie->id_cart);
     }
 
     public function initContent()
@@ -28,45 +27,36 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
         $id_cart = (int)Tools::getValue('id_cart');
         $id_module = (int)Tools::getValue('id_module');
         $key = Tools::getValue('key');
-        if (!$id_module || !$key) {
-            Tools::redirect('history.php');
-        }
+        $quickpay = new Quickpay();
         for ($i = 0; $i < 10; $i++) {
-            /* Wait for validation */
             $trans = Db::getInstance()->getRow('SELECT *
-                    FROM '._DB_PREFIX_.'quickpay_execution
-                    WHERE `id_cart` = '.$id_cart.'
-                    ORDER BY `id_cart` ASC');
-            if ($trans && $trans['accepted']) {
+                FROM '._DB_PREFIX_.'quickpay_execution
+                WHERE `id_cart` = '.$id_cart.'
+                ORDER BY `id_cart` ASC');
+            if ($trans) {
+                $setup = $quickpay->getSetup();
+                $json = $quickpay->doCurl('payments/'.$trans['trans_id']);
+                $vars = $quickpay->jsonDecode($json);
+                $json = Tools::jsonEncode($vars);
+                if ($vars->accepted == 1) {
+                    $checksum = $quickpay->sign($json, $setup->private_key);
+                    $quickpay->validate($json, $checksum);
+                }
+            }
+            /* Wait for validation */
+            $id_order = Order::getOrderByCartId((int)$id_cart);
+            if ($id_order) {
                 break;
             }
             sleep(1);
         }
-        if ($trans && !$trans['accepted']) {
-            $quickpay = new Quickpay();
-            $setup = $quickpay->getSetup();
-            $json = $quickpay->doCurl('payments/'.$trans['trans_id']);
-            $vars = $quickpay->jsonDecode($json);
-            $json = Tools::jsonEncode($vars);
-            if ($vars->accepted == 1) {
-                $checksum = $quickpay->sign($json, $setup->private_key);
-                $quickpay->validate($json, $checksum, _PS_OS_ERROR_);
-            }
-        }
-        $id_order = Order::getOrderByCartId((int)$id_cart);
-        if (!$id_order) {
+        if (!$id_order || !$id_module || !$key) {
             Tools::redirect('history.php');
         }
         $order = new Order((int)$id_order);
-        $context = Context::getContext();
-        $id_customer = $context->cookie->id_customer;
-        if (!$id_customer) {
-            $id_guest = $context->cookie->id_guest;
-            $guest = new Guest($id_guest);
-            $id_customer = $guest->id_customer;
-        }
+        $customer = new Customer($order->id_customer);
         if (!Validate::isLoadedObject($order) ||
-                $order->id_customer != $id_customer) {
+                $customer->secure_key != $key) {
             Tools::redirect('history.php');
         }
         Tools::redirect(

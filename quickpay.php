@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2017/10/05 20:26:12 $
+*  $Date: 2017/11/22 04:42:03 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.34';
+        $this->version = '4.0.37';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -435,13 +435,7 @@ class QuickPay extends PaymentModule
             return $this->displayError($err);
         }
 
-        if (Configuration::get('PS_SHOP_ENABLE')) {
-            $output = '';
-        } else {
-            $output = $this->displayError(
-                $this->l('The callback function does not work when the shop is in maintenance mode')
-            );
-        }
+        $output = '';
         $row = Db::getInstance()->ExecuteS(
             'SHOW TABLES LIKE "'._DB_PREFIX_.'quickpay_execution"'
         );
@@ -1228,19 +1222,16 @@ class QuickPay extends PaymentModule
         if (isset($cart->qpPreview)) {
             $cart_total = 10000;
         }
-        if (!defined('QUICKPAY_COMPLETE')) {
-            define('QUICKPAY_COMPLETE', 'complete');
-        }
         $continueurl = $this->getModuleLink(
-            QUICKPAY_COMPLETE,
+            'complete',
             array(
                 'key' => $customer->secure_key,
                 'id_cart' => (int)$cart->id,
-                'id_module' => (int)$this->id
+                'id_module' => (int)$this->id,
+                'utm_nooverride' => 1
             )
         );
         $cancelurl = $this->getPageLink('order', 'step=3');
-        $callbackurl = $this->getModuleLink('validation');
         $payment_url = $this->getModuleLink('payment');
         $html = '';
 
@@ -1368,7 +1359,6 @@ class QuickPay extends PaymentModule
                 'autocapture'       => $setup->autocapture,
                 'autofee'           => $autofee,
                 'branding_id'       => $branding,
-                'callback_url'      => $callbackurl,
                 'cancel_url'        => $cancelurl,
                 'continue_url'      => $continueurl,
                 'currency'          => $currency->iso_code,
@@ -1554,16 +1544,6 @@ class QuickPay extends PaymentModule
 
         $order = new Order((int)$params['id_order']);
         $currency = new Currency((int)$order->id_currency);
-        $trans = Db::getInstance()->getRow(
-            'SELECT *
-            FROM '._DB_PREFIX_.'quickpay_execution
-            WHERE `id_cart` = '.$order->id_cart.'
-            ORDER BY `exec_id` ASC'
-        );
-        if (!$trans) {
-            return '';
-        }
-        $order_id = $trans['order_id'];
         $module = Db::getInstance()->getRow(
             'SELECT `module`
             FROM '._DB_PREFIX_.'orders
@@ -1571,6 +1551,27 @@ class QuickPay extends PaymentModule
         );
         if ($module['module'] != 'quickpay') {
             return '';
+        }
+        $trans = Db::getInstance()->getRow(
+            'SELECT *
+            FROM '._DB_PREFIX_.'quickpay_execution
+            WHERE `id_cart` = '.$order->id_cart.'
+            ORDER BY `exec_id` ASC'
+        );
+        if ($trans) {
+            $trans_id = $trans['trans_id'];
+            $order_id = $trans['order_id'];
+        } else {
+            // Look for payment via API
+            $order_id = $setup->orderprefix.(int)$order->id_cart;
+            $json = $this->doCurl('payments', array('order_id='.$order_id), 'GET');
+            $vars = $this->jsonDecode($json);
+            $vars = reset($vars);
+            if (empty($vars->id)) {
+                return '';
+            }
+            $trans_id = $vars->id;
+            $order_id = $vars->order_id;
         }
         if ($this->v16) {
             $html = '<div class="row"><div class="col-lg-5 panel">
@@ -1582,14 +1583,8 @@ class QuickPay extends PaymentModule
                 <legend>'.$this->l('Quickpay API').'</legend>';
         }
 
-        if (!Configuration::get('PS_SHOP_ENABLE')) {
-            $html .= '<p class="error alert-danger">'.
-                $this->l('The callback function does not work when the shop is in maintenance mode').
-                '</p>';
-        }
-
         $double_post = false;
-        $status_data = $this->doCurl('payments/'.$trans['trans_id']);
+        $status_data = $this->doCurl('payments/'.$trans_id);
         if (!empty($status_data)) {
             $vars = $this->jsonDecode($status_data);
             if (!empty($vars->id) &&
@@ -1603,7 +1598,7 @@ class QuickPay extends PaymentModule
             $amount = $this->fromUserAmount($amount, $currency);
             $amount = $this->toQpAmount($amount, $currency);
             $fields = array('amount='.$amount);
-            $action_data = $this->doCurl('payments/'.$trans['trans_id'].'/capture', $fields);
+            $action_data = $this->doCurl('payments/'.$trans_id.'/capture', $fields);
             // $html .= '<pre>'.print_r(json_decode($action_data), true).'</pre>';
         }
 
@@ -1612,20 +1607,20 @@ class QuickPay extends PaymentModule
             $amount = $this->fromUserAmount($amount, $currency);
             $amount = $this->toQpAmount($amount, $currency);
             $fields = array('amount='.$amount);
-            $action_data = $this->doCurl('payments/'.$trans['trans_id'].'/refund', $fields);
+            $action_data = $this->doCurl('payments/'.$trans_id.'/refund', $fields);
             // $html .= '<pre>'.print_r(json_decode($action_data), true).'</pre>';
         }
 
         if (!$double_post && Tools::isSubmit('qpcancel')) {
-            $action_data = $this->doCurl('payments/'.$trans['trans_id'].'/cancel', null, 'POST');
+            $action_data = $this->doCurl('payments/'.$trans_id.'/cancel', null, 'POST');
             // $html .= '<pre>'.print_r($action_data, true).'</pre>';
             // $html .= '<pre>'.print_r(json_decode($action_data), true).'</pre>';
         }
 
         if (isset($action_data)) {
             $vars = $this->jsonDecode($action_data);
-            if (isset($vars) && isset($vars->errors) && !empty((array)$vars->errors)) {
-                if ($vars->errors->amount[0] == 'is too large') {
+            if (isset($vars) && isset($vars->errors) && get_object_vars($vars->errors)) {
+                if (isset($vars->errors->amount) && $vars->errors->amount[0] == 'is too large') {
                     $html .= '<p class="error alert-danger">'.$this->l('Amount is too large').'</p>';
                 } else {
                     $html .= '<pre>'.print_r($this->jsonDecode($action_data), true).'</pre>';
@@ -1636,7 +1631,7 @@ class QuickPay extends PaymentModule
         }
 
         // Get status reply from quickpay
-        $status_data = $this->doCurl('payments/'.$trans['trans_id']);
+        $status_data = $this->doCurl('payments/'.$trans_id);
         if (empty($status_data)) {
             $html .= '<pre>'.$this->curl_error.'</pre>';
             if ($this->v16) {
@@ -2027,13 +2022,14 @@ class QuickPay extends PaymentModule
         $fields[] = 'shipping_address[mobile_number]='.$delivery_address->phone_mobile;
         $fields[] = 'shipping_address[vat_no]='.$delivery_address->vat_number;
         $fields[] = 'shipping_address[email]='.$customer->email;
-        foreach ($cart->getProducts() as $ndx => $product) {
-            $ndx = '';
-            $fields[] = 'basket['.$ndx.'][qty]='.$product['cart_quantity'];
-            $fields[] = 'basket['.$ndx.'][item_no]='.$product['id_product'];
-            $fields[] = 'basket['.$ndx.'][item_name]='.$product['name'];
-            $fields[] = 'basket['.$ndx.'][item_price]='.$product['price'];
-            $fields[] = 'basket['.$ndx.'][vat_rate]='.$product['rate'] / 100;
+        if (!in_array('payment_methods=paypal', $fields)) {
+            foreach ($cart->getProducts() as $product) {
+                $fields[] = 'basket[][qty]='.$product['cart_quantity'];
+                $fields[] = 'basket[][item_no]='.$product['id_product'];
+                $fields[] = 'basket[][item_name]='.$product['name'];
+                $fields[] = 'basket[][item_price]='.$this->toQpAmount($product['price_wt'], $currency);
+                $fields[] = 'basket[][vat_rate]='.$product['rate'] / 100;
+            }
         }
         if (!Validate::isLoadedObject($cart)) {
             $msg = 'QuickPay: Payment error. Not a valid cart';
@@ -2062,7 +2058,7 @@ class QuickPay extends PaymentModule
                     die($vars->message);
                 }
             }
-            $vars = $vars[0];
+            $vars = reset($vars);
             if (empty($vars->id)) {
                 if (empty($this->qp_error)) {
                     $msg = 'QuickPay: Payment error: '.$saved_vars->message;
@@ -2274,8 +2270,8 @@ class QuickPay extends PaymentModule
 
     public function addFee(&$cart, $fee)
     {
-        $def_lang = (int)Configuration::get('PS_LANG_DEFAULT');
-        $txt = $this->l('Credit card fee', $this->name, $def_lang);
+        $id_lang = (int)$cart->id_lang;
+        $txt = $this->l('Credit card fee', $this->name, $id_lang);
         $row = Db::getInstance()->getRow(
             'SELECT `id_product`
             FROM '._DB_PREFIX_.'product
@@ -2300,11 +2296,16 @@ class QuickPay extends PaymentModule
         if ($fee <= 0) {
             return;
         }
-        $product->name = array($def_lang => $txt);
+        $product->name = array();
+        $product->link_rewrite = array();
+        foreach (Language::getLanguages(false) as $lang) {
+            $id_lang = $lang['id_lang'];
+            $product->name[$id_lang] = $this->l('Credit card fee', $this->name, $id_lang);
+            $product->link_rewrite[$id_lang] = 'fee';
+        }
         $product->active = 0;
         $product->price = $fee;
         $product->quantity = 100;
-        $product->link_rewrite = array($def_lang => 'fee');
         $product->reference = $this->l('cardfee');
         $id_currency = Configuration::get('PS_CURRENCY_DEFAULT');
         $currency = new Currency((int)$cart->id_currency);
