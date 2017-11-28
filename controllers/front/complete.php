@@ -6,7 +6,7 @@
  *  @copyright 2015 Quickpay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2017/11/22 04:40:06 $
+ *  $Date: 2017/11/23 20:07:15 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -59,6 +59,7 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
                 $customer->secure_key != $key) {
             Tools::redirect('history.php');
         }
+        unset($this->context->cookie->id_cart);
         Tools::redirect(
             'index.php?controller=order-confirmation&id_cart='.$id_cart.
             '&id_module='.$id_module.

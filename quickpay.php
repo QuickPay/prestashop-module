@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2017/11/22 04:42:03 $
+*  $Date: 2017/11/28 06:37:12 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.37';
+        $this->version = '4.0.38';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -2000,35 +2000,45 @@ class QuickPay extends PaymentModule
         $delivery_country = $this->getIso3($country->iso_code);
         $customer = new Customer((int)$cart->id_customer);
         $currency = new Currency((int)$cart->id_currency);
-        $fields[] = 'variables[module_version]='.$this->version;
-        $fields[] = 'customer_email='.$customer->email;
-        $fields[] = 'google_analytics_client_id='.$setup->ga_client_id;
-        $fields[] = 'google_analytics_tracking_id='.$setup->ga_tracking_id;
-        $fields[] = 'invoice_address[name]='.$invoice_address->firstname.' '.$invoice_address->lastname;
-        $fields[] = 'invoice_address[street]='.$invoice_street;
-        $fields[] = 'invoice_address[city]='.$invoice_address->city;
-        $fields[] = 'invoice_address[zip_code]='.$invoice_address->postcode;
-        $fields[] = 'invoice_address[country_code]='.$invoice_country;
-        $fields[] = 'invoice_address[phone_number]='.$invoice_address->phone;
-        $fields[] = 'invoice_address[mobile_number]='.$invoice_address->phone_mobile;
-        $fields[] = 'invoice_address[vat_no]='.$invoice_address->vat_number;
-        $fields[] = 'invoice_address[email]='.$customer->email;
-        $fields[] = 'shipping_address[name]='.$delivery_address->firstname.' '.$delivery_address->lastname;
-        $fields[] = 'shipping_address[street]='.$delivery_street;
-        $fields[] = 'shipping_address[city]='.$delivery_address->city;
-        $fields[] = 'shipping_address[zip_code]='.$delivery_address->postcode;
-        $fields[] = 'shipping_address[country_code]='.$delivery_country;
-        $fields[] = 'shipping_address[phone_number]='.$delivery_address->phone;
-        $fields[] = 'shipping_address[mobile_number]='.$delivery_address->phone_mobile;
-        $fields[] = 'shipping_address[vat_no]='.$delivery_address->vat_number;
-        $fields[] = 'shipping_address[email]='.$customer->email;
-        if (!in_array('payment_methods=paypal', $fields)) {
+        $info = array(
+            'variables[module_version]' => $this->version,
+            'customer_email' => $customer->email,
+            'google_analytics_client_id' => $setup->ga_client_id,
+            'google_analytics_tracking_id' => $setup->ga_tracking_id,
+            'invoice_address[name]' => $invoice_address->firstname.' '.$invoice_address->lastname,
+            'invoice_address[street]' => $invoice_street,
+            'invoice_address[city]' => $invoice_address->city,
+            'invoice_address[zip_code]' => $invoice_address->postcode,
+            'invoice_address[country_code]' => $invoice_country,
+            'invoice_address[phone_number]' => $invoice_address->phone,
+            'invoice_address[mobile_number]' => $invoice_address->phone_mobile,
+            'invoice_address[vat_no]' => $invoice_address->vat_number,
+            'invoice_address[email]' => $customer->email,
+            'shipping_address[name]' => $delivery_address->firstname.' '.$delivery_address->lastname,
+            'shipping_address[street]' => $delivery_street,
+            'shipping_address[city]' => $delivery_address->city,
+            'shipping_address[zip_code]' => $delivery_address->postcode,
+            'shipping_address[country_code]' => $delivery_country,
+            'shipping_address[phone_number]' => $delivery_address->phone,
+            'shipping_address[mobile_number]' => $delivery_address->phone_mobile,
+            'shipping_address[vat_no]' => $delivery_address->vat_number,
+            'shipping_address[email]' => $customer->email
+        );
+        foreach ($info as $k => $v) {
+            $fields[] = $k.'='.urlencode($v);
+        }
+        if (!in_array('payment_methods = paypal', $fields)) {
             foreach ($cart->getProducts() as $product) {
-                $fields[] = 'basket[][qty]='.$product['cart_quantity'];
-                $fields[] = 'basket[][item_no]='.$product['id_product'];
-                $fields[] = 'basket[][item_name]='.$product['name'];
-                $fields[] = 'basket[][item_price]='.$this->toQpAmount($product['price_wt'], $currency);
-                $fields[] = 'basket[][vat_rate]='.$product['rate'] / 100;
+                $info = array(
+                    'basket[][qty]' => $product['cart_quantity'],
+                    'basket[][item_no]' => $product['id_product'],
+                    'basket[][item_name]' => $product['name'],
+                    'basket[][item_price]' => $this->toQpAmount($product['price_wt'], $currency),
+                    'basket[][vat_rate]' => $product['rate'] / 100
+                );
+                foreach ($info as $k => $v) {
+                    $fields[] = $k.'='.urlencode($v);
+                }
             }
         }
         if (!Validate::isLoadedObject($cart)) {

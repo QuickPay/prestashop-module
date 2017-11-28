@@ -131,3 +131,6 @@ Show orders in back office even if quickpay table has been emptied.
 Version 4.0.37
 2017-11-22 2017-11-23
 Do not invalidate cart cache.
+Version 4.0.38.
+Fixed problem for basket with % in product names.
+Fixed unwanted log message: Frontcontroller::init - Cart cannot be loaded or an order has already been placed using this cart
