@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2017/12/14 06:25:44 $
+*  $Date: 2017/11/28 06:37:12 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.39';
+        $this->version = '4.0.38';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -2027,7 +2027,7 @@ class QuickPay extends PaymentModule
         foreach ($info as $k => $v) {
             $fields[] = $k.'='.urlencode($v);
         }
-        if (!in_array('payment_methods=paypal', $fields)) {
+        if (!in_array('payment_methods = paypal', $fields)) {
             foreach ($cart->getProducts() as $product) {
                 $info = array(
                     'basket[][qty]' => $product['cart_quantity'],
@@ -2260,7 +2260,6 @@ class QuickPay extends PaymentModule
             if ($id_order) {
                 $order = new Order($id_order);
                 $fields = array(
-                    'variables[module_version]='.$this->version,
                     'variables[id_order]='.$order->id,
                     'variables[reference]='.$order->reference,
                 );

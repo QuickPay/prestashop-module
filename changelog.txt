@@ -134,7 +134,3 @@ Do not invalidate cart cache.
 Version 4.0.38.
 Fixed problem for basket with % in product names.
 Fixed unwanted log message: Frontcontroller::init - Cart cannot be loaded or an order has already been placed using this cart
-Version 4.0.39
-2017-11-23 2017-12-15
-Removed unwanted spaces in test for PayPal method.
-Fixed module_version in variables.
