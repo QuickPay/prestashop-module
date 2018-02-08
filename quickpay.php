@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2018/01/11 21:04:49 $
+*  $Date: 2018/02/08 06:39:16 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.40';
+        $this->version = '4.0.41';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -2025,7 +2025,7 @@ class QuickPay extends PaymentModule
             'shipping_address[mobile_number]' => $delivery_address->phone_mobile,
             'shipping_address[vat_no]' => $delivery_address->vat_number,
             'shipping_address[email]' => $customer->email,
-            'shipping[amount]' => $this->toQpAmount($cart->getTotalShippingCost()),
+            'shipping[amount]' => $this->toQpAmount($cart->getTotalShippingCost(), $currency),
             'shipping[vat_rate]' => $carrier->getTaxesRate($address) / 100
         );
         foreach ($info as $k => $v) {
