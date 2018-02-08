@@ -142,3 +142,6 @@ Version 4.0.40
 2017-12-15 2018-01-12
 Added shipping cost to payment information.
 Removed colon.
+Version 4.0.41
+2017-12-15 2018-02-08
+Parameter was missing for toQpAmount().
