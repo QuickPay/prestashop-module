@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2018/02/08 06:39:16 $
+*  $Date: 2018/02/19 19:13:33 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.41';
+        $this->version = '4.0.42';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -1232,6 +1232,7 @@ class QuickPay extends PaymentModule
             )
         );
         $cancelurl = $this->getPageLink('order', 'step=3');
+        $callbackurl = $this->getModuleLink('validation');
         $payment_url = $this->getModuleLink('payment');
         $html = '';
 
@@ -1359,6 +1360,7 @@ class QuickPay extends PaymentModule
                 'autocapture'       => $setup->autocapture,
                 'autofee'           => $autofee,
                 'branding_id'       => $branding,
+                'callback_url'      => $callbackurl,
                 'cancel_url'        => $cancelurl,
                 'continue_url'      => $continueurl,
                 'currency'          => $currency->iso_code,

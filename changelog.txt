@@ -145,3 +145,6 @@ Removed colon.
 Version 4.0.41
 2017-12-15 2018-02-08
 Parameter was missing for toQpAmount().
+Version 4.0.42
+2018-02-09 2018-02-19
+Reintroduced callback function.
