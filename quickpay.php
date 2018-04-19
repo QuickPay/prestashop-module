@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2018/02/19 19:13:33 $
+*  $Date: 2018/04/18 21:16:05 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.42';
+        $this->version = '4.0.42b';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -211,7 +211,11 @@ class QuickPay extends PaymentModule
             array('_QUICKPAY_PAYPAL', 'paypal',
                     $this->l('PayPal'), 0, 'paypal'),
             array('_QUICKPAY_SOFORT', 'sofort',
-                    $this->l('Sofort'), 0, 'sofort'));
+                    $this->l('Sofort'), 0, 'sofort'),
+            array('_QUICKPAY_APPLEPAY', 'applepay',
+                    $this->l('Apple Pay'), 0, 'applepay'),
+            array('_QUICKPAY_BITCOIN', 'bitcoin',
+                    $this->l('Bitcoin'), 0, 'bitcoin'));
         $this->setup = new StdClass();
         $this->setup->lock_names = array();
         $this->setup->card_type_locks = array();
@@ -2005,7 +2009,6 @@ class QuickPay extends PaymentModule
         $customer = new Customer((int)$cart->id_customer);
         $currency = new Currency((int)$cart->id_currency);
         $info = array(
-            'variables[module_version]' => $this->version,
             'customer_email' => $customer->email,
             'google_analytics_client_id' => $setup->ga_client_id,
             'google_analytics_tracking_id' => $setup->ga_tracking_id,
@@ -2028,7 +2031,9 @@ class QuickPay extends PaymentModule
             'shipping_address[vat_no]' => $delivery_address->vat_number,
             'shipping_address[email]' => $customer->email,
             'shipping[amount]' => $this->toQpAmount($cart->getTotalShippingCost(), $currency),
-            'shipping[vat_rate]' => $carrier->getTaxesRate($address) / 100
+            'shipping[vat_rate]' => $carrier->getTaxesRate($address) / 100,
+            'shopsystem[name]' => 'PrestaShop',
+            'shopsystem[version]' => $this->version
         );
         foreach ($info as $k => $v) {
             $fields[] = $k.'='.urlencode($v);
@@ -2266,7 +2271,6 @@ class QuickPay extends PaymentModule
             if ($id_order) {
                 $order = new Order($id_order);
                 $fields = array(
-                    'variables[module_version]='.$this->version,
                     'variables[id_order]='.$order->id,
                     'variables[reference]='.$order->reference,
                 );
