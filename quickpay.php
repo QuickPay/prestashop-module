@@ -6,7 +6,7 @@
 *  @copyright 2015 Quickpay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2018/04/18 21:16:05 $
+*  $Date: 2018/05/09 04:18:49 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.42b';
+        $this->version = '4.0.43';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -231,7 +231,8 @@ class QuickPay extends PaymentModule
             'mastercarddebet',
             'maestro',
             'diners',
-            'jcb'
+            'jcb',
+            'applepay'
         );
         $credit_cards2d = array(
             'visa_3d' => 'visa',
@@ -274,6 +275,9 @@ class QuickPay extends PaymentModule
                     } else {
                         $this->setup->$field = 2;
                     }
+                }
+                if ($vars->var_name == 'applepay') {
+                    $this->setup->$field = 2;
                 }
                 if ($this->setup->$field) {
                     $this->setup->credit_cards[$vars->var_name] = $vars->card_text;
@@ -1007,6 +1011,9 @@ class QuickPay extends PaymentModule
             $vars = $this->varsObj($setup_var);
             $var_name = $vars->var_name;
             $field = $var_name;
+            if (!$setup->autoget && $vars->var_name == 'applepay') {
+                continue;
+            }
             if (!$vars->card_type_lock || !$setup->$field) {
                 continue;
             }
@@ -1259,6 +1266,9 @@ class QuickPay extends PaymentModule
             $card_list = array($vars->var_name);
             $card_text = $vars->card_text;
             $field = $vars->var_name;
+            if (!$setup->autoget && $vars->var_name == 'applepay') {
+                continue;
+            }
             if (!$vars->card_type_lock || !$setup->$field) {
                 continue;
             }
@@ -2009,6 +2019,9 @@ class QuickPay extends PaymentModule
         $customer = new Customer((int)$cart->id_customer);
         $currency = new Currency((int)$cart->id_currency);
         $info = array(
+            'variables[module_version]' => $this->version,
+            'shopsystem[name]' => 'PrestaShop',
+            'shopsystem[version]' => $this->version,
             'customer_email' => $customer->email,
             'google_analytics_client_id' => $setup->ga_client_id,
             'google_analytics_tracking_id' => $setup->ga_tracking_id,
@@ -2029,16 +2042,19 @@ class QuickPay extends PaymentModule
             'shipping_address[phone_number]' => $delivery_address->phone,
             'shipping_address[mobile_number]' => $delivery_address->phone_mobile,
             'shipping_address[vat_no]' => $delivery_address->vat_number,
-            'shipping_address[email]' => $customer->email,
-            'shipping[amount]' => $this->toQpAmount($cart->getTotalShippingCost(), $currency),
-            'shipping[vat_rate]' => $carrier->getTaxesRate($address) / 100,
-            'shopsystem[name]' => 'PrestaShop',
-            'shopsystem[version]' => $this->version
+            'shipping_address[email]' => $customer->email
         );
         foreach ($info as $k => $v) {
             $fields[] = $k.'='.urlencode($v);
         }
         if (!in_array('payment_methods=paypal', $fields)) {
+            $info = array(
+                'shipping[amount]' => $this->toQpAmount($cart->getTotalShippingCost(), $currency),
+                'shipping[vat_rate]' => $carrier->getTaxesRate($address) / 100,
+            );
+            foreach ($info as $k => $v) {
+                $fields[] = $k.'='.urlencode($v);
+            }
             foreach ($cart->getProducts() as $product) {
                 $info = array(
                     'basket[][qty]' => $product['cart_quantity'],

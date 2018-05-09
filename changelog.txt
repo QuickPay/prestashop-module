@@ -148,3 +148,7 @@ Parameter was missing for toQpAmount().
 Version 4.0.42
 2018-02-09 2018-02-19
 Reintroduced callback function.
+Version 4.0.43
+2018-02-19 2018-05-09
+Added Apple Pay and Bitcoin.
+Fixed PayPal payments with shipping cost greater than zero.
