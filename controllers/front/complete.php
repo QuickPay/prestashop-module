@@ -3,10 +3,10 @@
  * NOTICE OF LICENSE
  *
  *  @author    Kjeld Borch Egevang
- *  @copyright 2015 Quickpay
+ *  @copyright 2015 QuickPay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2018/02/09 21:27:10 $
+ *  $Date: 2019/01/07 06:37:33 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -20,6 +20,7 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
         $id_cart = (int)Tools::getValue('id_cart');
         $id_module = (int)Tools::getValue('id_module');
         $key = Tools::getValue('key');
+        $key2 = Tools::getValue('key2');
         if (!$id_module || !$key) {
             Tools::redirect('history.php');
         }
@@ -35,7 +36,7 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
             sleep(1);
         }
         if ($trans && !$trans['accepted']) {
-            $quickpay = new Quickpay();
+            $quickpay = new QuickPay();
             $setup = $quickpay->getSetup();
             $json = $quickpay->doCurl('payments/'.$trans['trans_id']);
             $vars = $quickpay->jsonDecode($json);
@@ -53,6 +54,21 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
         }
         $order = new Order((int)$id_order);
         $customer = new Customer($order->id_customer);
+        if ($key2) {
+            $quickpay = new QuickPay();
+            $trans = Db::getInstance()->getRow('SELECT *
+                FROM '._DB_PREFIX_.'quickpay_execution
+                WHERE `id_cart` = '.$id_cart.'
+                ORDER BY `id_cart` ASC');
+            $json = $trans['json'];
+            $vars = $quickpay->jsonDecode($json);
+            $query = parse_url($vars->link->continue_url, PHP_URL_QUERY);
+            parse_str($query, $args);
+            if ($args['key'] == $key) {
+                $key = $customer->secure_key;
+            }
+            $this->context->cookie->id_customer = $customer->id;
+        }
         if (!Validate::isLoadedObject($order) ||
                 $customer->secure_key != $key) {
             Tools::redirect('history.php');

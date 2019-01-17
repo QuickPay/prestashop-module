@@ -3,10 +3,10 @@
  * NOTICE OF LICENSE
  *
  *  @author    Kjeld Borch Egevang
- *  @copyright 2015 Quickpay
+ *  @copyright 2015 QuickPay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2016/11/12 20:35:49 $
+ *  $Date: 2019/01/07 06:37:33 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -23,7 +23,8 @@ class QuickPayValidationModuleFrontController extends ModuleFrontController
         }
         $checksum = $_SERVER['HTTP_QUICKPAY_CHECKSUM_SHA256'];
 
-        $quickpay = new Quickpay();
+        $quickpay = new QuickPay();
         $quickpay->validate($json, $checksum);
+        exit(0);
     }
 }
