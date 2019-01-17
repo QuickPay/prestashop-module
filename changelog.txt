@@ -152,3 +152,21 @@ Version 4.0.43
 2018-02-19 2018-05-09
 Added Apple Pay and Bitcoin.
 Fixed PayPal payments with shipping cost greater than zero.
+Version 4.0.44
+2018-05-09 2019-01-03
+Added support for MobilePay Checkout.
+Fixed back office confirmation message.
+Removed obsolete argument (language ID) from displayDate.
+Added payment methods mastercard-debet (without -dk) and 3d_mastercard-debet (without -dk)
+Modified styling for logos.
+Use shop specific configuration for order (multistore) in admin panel.
+The variable "link" was missing in back office for PrestaShop 1.6.
+Fixed logging for PrestaShop 1.7.
+Ignore double validation (unnecessary log message removed).
+Fixed fail message (currency changed, test order) for PrestaShop 1.7.
+Use getMediaLink() for logos.
+Renamed Quickpay to QuickPay.
+Version 4.0.45
+2019-01-07 2019-01-14
+Fixed phone number for MobilePay Checkout.
+MobilePay Checkout option was not always properly disabled.
