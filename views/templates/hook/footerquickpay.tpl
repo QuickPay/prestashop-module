@@ -1,6 +1,6 @@
 {*
 * NOTICE OF LICENSE
-* $Date: 2015/04/22 19:18:18 $
+* $Date: 2018/09/15 06:03:59 $
 * Written by Kjeld Borch Egevang
 * E-mail: helpdesk@quickpay.net
 *}
@@ -9,11 +9,9 @@
 <h4>
 	{l s='Payment methods' mod='quickpay'}
 </h4>
-<div class="block_content toggle-footer" style="display: block;">
+<div class="block_content toggle-footer quickpay imgf">
 {foreach from=$ordering_list item=var_name}
-<div class="col-xs-3 col-sm-6" style="float: left; padding-left: 0px;">
-  	<img style="margin-bottom: 10px;" src="{$module_dir|escape:'htmlall':'UTF-8'}views/imgf/{$var_name|escape:'htmlall':'UTF-8'}.gif" alt="{l s='Credit card' mod='quickpay'}" />
-</div>
+    <img src="{$link->getMediaLink("`$module_dir|escape:'htmlall':'UTF-8'`views/img/`$var_name|escape:'htmlall':'UTF-8'`.png")}" alt="{l s='Credit card' mod='quickpay'}" />
 {/foreach}
 </div>
 </section>

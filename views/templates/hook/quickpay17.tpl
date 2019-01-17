@@ -1,17 +1,17 @@
 {*
 * NOTICE OF LICENSE
-* $Date: 2016/11/11 04:32:14 $
+* $Date: 2018/09/15 05:10:42 $
 * Written by Kjeld Borch Egevang
 * E-mail: helpdesk@quickpay.net
 *}
 
-<p class="payment_module quickpay">
-{foreach from=$imgs item=img}
 {if $imgs|@count gt 2}
-		<img src="{$module_dir|escape:'htmlall':'UTF-8'}views/imgf/{$img|escape:'htmlall':'UTF-8'}.gif" alt="{l s='Pay with credit cards ' mod='quickpay'}" />
+<p class="payment_module quickpay imgf">
 {else}
-		<img src="{$module_dir|escape:'htmlall':'UTF-8'}views/img/{$img|escape:'htmlall':'UTF-8'}.png" alt="{l s='Pay with credit cards ' mod='quickpay'}" />
+<p class="payment_module quickpay">
 {/if}
+{foreach from=$imgs item=img}
+            <img src="{$module_dir|escape:'htmlall':'UTF-8'}views/img/{$img|escape:'htmlall':'UTF-8'}.png" alt="{l s='Pay with credit cards ' mod='quickpay'}" />
 {/foreach}
 {if $fees|@count gt 0}
 <span style="display:table">
