@@ -1,3 +1,11 @@
+.quickpay.imgf img {
+    max-height: 22px;
+    width: auto;
+    margin-bottom: 3px;
+}
+.toggle-footer.quickpay.imgf img {
+    background-color: white;
+}
 p.payment_module.quickpay a {
 	padding-left: 15px;
 }
