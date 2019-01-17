@@ -3,10 +3,10 @@
  * NOTICE OF LICENSE
  *
  *  @author    Kjeld Borch Egevang
- *  @copyright 2015 Quickpay
+ *  @copyright 2015 QuickPay
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *
- *  $Date: 2017/11/12 05:14:59 $
+ *  $Date: 2019/01/07 06:37:29 $
  *  E-mail: helpdesk@quickpay.net
  */
 
@@ -24,7 +24,7 @@ $key = Tools::getValue('key');
 if (!$id_module || !$key) {
     Tools::redirect('history.php');
 }
-$quickpay = new Quickpay();
+$quickpay = new QuickPay();
 $cookie = $quickpay->context->cookie;
 for ($i = 0; $i < 10; $i++) {
     $trans = Db::getInstance()->getRow('SELECT *
