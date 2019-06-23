@@ -6,7 +6,7 @@
 *  @copyright 2015 QuickPay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2019/01/14 21:29:48 $
+*  $Date: 2019/06/23 05:58:45 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.45';
+        $this->version = '4.0.46';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -174,10 +174,13 @@ class QuickPay extends PaymentModule
                     $this->l('Auto-capture payments'), 0, ''),
             array('_QUICKPAY_STATECAPTURE', 'statecapture',
                     $this->l('Capture payments in state'), 0, ''),
+            array('_QUICKPAY_STATECAPTURE2', 'statecapture2',
+                    $this->l('Alternative state for payment capture'), 0, ''),
             array('_QUICKPAY_BRANDING', 'branding',
                     $this->l('Branding in payment window'), 0, ''),
             array('_QUICKPAY_FEE_TAX', 'feetax',
                     $this->l('Tax for card fee'), 0, ''),
+            array('_QUICKPAY_CMS_ID', 'cmsid', $this->l('Info page for MobilePay Checkout'), 0, ''),
             array('_QUICKPAY_VIABILL', 'viabill',
                     $this->l('ViaBill - buy now, pay whenever you want'), 0, 'viabill'),
             array('_QUICKPAY_DK', 'dk',
@@ -204,6 +207,8 @@ class QuickPay extends PaymentModule
                     $this->l('Diners Club'), 0, 'diners,diners-dk'),
             array('_QUICKPAY_JCB', 'jcb',
                     $this->l('JCB'), 0, 'jcb'),
+            array('_QUICKPAY_DK_3D', 'dk_3d',
+                    $this->l('Dankort (3D)'), 0, '3d-dankort'),
             array('_QUICKPAY_VISA_3D', 'visa_3d',
                     $this->l('Visa card (3D)'), 0, '3d-visa,3d-visa-dk'),
             array('_QUICKPAY_VELECTRON_3D', 'visaelectron_3d',
@@ -223,7 +228,11 @@ class QuickPay extends PaymentModule
             array('_QUICKPAY_APPLEPAY', 'applepay',
                     $this->l('Apple Pay'), 0, 'applepay'),
             array('_QUICKPAY_BITCOIN', 'bitcoin',
-                    $this->l('Bitcoin'), 0, 'bitcoin'));
+                    $this->l('Bitcoin'), 0, 'bitcoin'),
+            array('_QUICKPAY_VIPPS', 'vipps',
+                    $this->l('Vipps'), 0, 'vipps'),
+            array('_QUICKPAY_RESURS', 'resurs',
+                    $this->l('Resurs Bank'), 0, 'resurs'));
         $this->setup = new StdClass();
         $this->setup->lock_names = array();
         $this->setup->card_type_locks = array();
@@ -624,39 +633,41 @@ class QuickPay extends PaymentModule
         return $vars->def_val !== '' &&
             $vars->var_name != 'orderprefix' &&
             $vars->var_name != 'statecapture' &&
+            $vars->var_name != 'statecapture2' &&
             $vars->var_name != 'branding' &&
-            $vars->var_name != 'feetax';
+            $vars->var_name != 'feetax' &&
+            $vars->var_name != 'cmsid';
     }
 
     protected function getConfigInput15($vars)
     {
         if ($this->useCheckBox($vars)) {
             $input = array(
-                    'type' => 'select',
-                    'name' => $vars->glob_name,
-                    'label' => $vars->card_text,
-                    'options' => array(
-                        'query' =>  array(
-                            array(
-                                'id' => '0',
-                                'name' => $this->l('No')
-                                ),
-                            array(
-                                'id' => '1',
-                                'name' => $this->l('Yes')
-                                )
-                            ),
-                        'id' => 'id',
-                        'name' => 'name'
+                'type' => 'select',
+                'name' => $vars->glob_name,
+                'label' => $vars->card_text,
+                'options' => array(
+                    'query' =>  array(
+                        array(
+                            'id' => '0',
+                            'name' => $this->l('No')
+                        ),
+                        array(
+                            'id' => '1',
+                            'name' => $this->l('Yes')
                         )
-                    );
+                    ),
+                    'id' => 'id',
+                    'name' => 'name'
+                )
+            );
         } else {
             $input = array(
-                    'size' => strpos($vars->var_name, '_key') === false ? 10 : 60,
-                    'type' => 'text',
-                    'name' => $vars->glob_name,
-                    'label' => $vars->card_text
-                    );
+                'size' => strpos($vars->var_name, '_key') === false ? 10 : 60,
+                'type' => 'text',
+                'name' => $vars->glob_name,
+                'label' => $vars->card_text
+            );
         }
         return $input;
     }
@@ -668,29 +679,29 @@ class QuickPay extends PaymentModule
         }
         if ($this->useCheckBox($vars)) {
             $input = array(
-                    'type' => 'switch',
-                    'name' => $vars->glob_name,
-                    'label' => $vars->card_text,
-                    'values' => array(
-                        array(
-                            'id' => 'on',
-                            'value' => '1',
-                            'label' => $this->l('Yes'),
-                            ),
-                        array(
-                            'id' => 'off',
-                            'value' => '0',
-                            'label' => $this->l('No'),
-                            )
-                        )
-                    );
+                'type' => 'switch',
+                'name' => $vars->glob_name,
+                'label' => $vars->card_text,
+                'values' => array(
+                    array(
+                        'id' => 'on',
+                        'value' => '1',
+                        'label' => $this->l('Yes'),
+                    ),
+                    array(
+                        'id' => 'off',
+                        'value' => '0',
+                        'label' => $this->l('No'),
+                    )
+                )
+            );
         } else {
             $input = array(
-                    'col' => strpos($vars->var_name, '_key') === false ? 3 : 6,
-                    'type' => 'text',
-                    'name' => $vars->glob_name,
-                    'label' => $vars->card_text
-                    );
+                'col' => strpos($vars->var_name, '_key') === false ? 3 : 6,
+                'type' => 'text',
+                'name' => $vars->glob_name,
+                'label' => $vars->card_text
+            );
         }
         if ($vars->var_name == 'statementtext') {
             $input['desc'] = $this->l('Max. 22 ASCII characters. Only for Clearhaus.');
@@ -705,20 +716,20 @@ class QuickPay extends PaymentModule
         $query[] = array('id' => 0,  'name' => $this->l('Never'));
         foreach ($order_states as $order_state) {
             $query[] = array(
-                    'id' => $order_state['id_order_state'],
-                    'name' => $order_state['name']
-                    );
+                'id' => $order_state['id_order_state'],
+                'name' => $order_state['name']
+            );
         }
         $input = array(
-                'type' => 'select',
-                'name' => $vars->glob_name,
-                'label' => $vars->card_text,
-                'options' => array(
-                    'query' =>  $query,
-                    'id' => 'id',
-                    'name' => 'name'
-                    )
-                );
+            'type' => 'select',
+            'name' => $vars->glob_name,
+            'label' => $vars->card_text,
+            'options' => array(
+                'query' =>  $query,
+                'id' => 'id',
+                'name' => 'name'
+            )
+        );
         return $input;
     }
 
@@ -732,20 +743,20 @@ class QuickPay extends PaymentModule
         $query[] = array('id' => 0,  'name' => $this->l('Standard'));
         foreach ($brandings as $id => $name) {
             $query[] = array(
-                    'id' => $id,
-                    'name' => $name
-                    );
+                'id' => $id,
+                'name' => $name
+            );
         }
         $input = array(
-                'type' => 'select',
-                'name' => $vars->glob_name,
-                'label' => $vars->card_text,
-                'options' => array(
-                    'query' =>  $query,
-                    'id' => 'id',
-                    'name' => 'name'
-                    )
-                );
+            'type' => 'select',
+            'name' => $vars->glob_name,
+            'label' => $vars->card_text,
+            'options' => array(
+                'query' =>  $query,
+                'id' => 'id',
+                'name' => 'name'
+            )
+        );
         return $input;
     }
 
@@ -759,20 +770,44 @@ class QuickPay extends PaymentModule
         $query = array();
         foreach ($taxes as $id => $name) {
             $query[] = array(
-                    'id' => $id,
-                    'name' => $name
-                    );
+                'id' => $id,
+                'name' => $name
+            );
         }
         $input = array(
-                'type' => 'select',
-                'name' => $vars->glob_name,
-                'label' => $vars->card_text,
-                'options' => array(
-                    'query' =>  $query,
-                    'id' => 'id',
-                    'name' => 'name'
-                    )
-                );
+            'type' => 'select',
+            'name' => $vars->glob_name,
+            'label' => $vars->card_text,
+            'options' => array(
+                'query' =>  $query,
+                'id' => 'id',
+                'name' => 'name'
+            )
+        );
+        return $input;
+    }
+
+    protected function getCmsIdInput($vars)
+    {
+        $query = array();
+        $query[] = array('id' => 0,  'name' => $this->l('None'));
+        $cmsPages = CMS::getCMSPages($this->context->language->id);
+        foreach ($cmsPages as $cmsPage) {
+            $query[] = array(
+                'id' => $cmsPage['id_cms'],
+                'name' => $cmsPage['meta_title']
+            );
+        }
+        $input = array(
+            'type' => 'select',
+            'name' => $vars->glob_name,
+            'label' => $vars->card_text,
+            'options' => array(
+                'query' =>  $query,
+                'id' => 'id',
+                'name' => 'name'
+            )
+        );
         return $input;
     }
 
@@ -784,7 +819,7 @@ class QuickPay extends PaymentModule
             if ($vars->card_type_lock) {
                 continue;
             }
-            if ($vars->var_name == 'statecapture') {
+            if ($vars->var_name == 'statecapture' || $vars->var_name == 'statecapture2') {
                 $inputs[] = $this->getStatesInput($vars);
                 continue;
             }
@@ -796,19 +831,23 @@ class QuickPay extends PaymentModule
                 $inputs[] = $this->getFeeTaxInput($vars);
                 continue;
             }
+            if ($vars->var_name == 'cmsid') {
+                $inputs[] = $this->getCmsIdInput($vars);
+                continue;
+            }
             $inputs[] = $this->getConfigInput($vars);
         }
         $submit = array(
-                'title' => $this->l('Save'),
-                );
+            'title' => $this->l('Save'),
+        );
         $form = array(
-                'legend' => array(
-                    'title' => $this->l('Settings'),
-                    'icon' => 'icon-cogs',
-                    ),
-                'input' => $inputs,
-                'submit' => $submit,
-                );
+            'legend' => array(
+                'title' => $this->l('Settings'),
+                'icon' => 'icon-cogs',
+            ),
+            'input' => $inputs,
+            'submit' => $submit,
+        );
         return array('form' => $form);
     }
 
@@ -1228,6 +1267,10 @@ class QuickPay extends PaymentModule
         } else {
             $this->context->controller->addCSS($this->_path.'/views/css/front15.css');
         }
+        if ($this->getConf('_QUICKPAY_MOBILEPAY_CHECKOUT')) {
+            $this->context->controller->addJqueryUI('ui.dialog');
+            $this->context->controller->addJS($this->_path.'views/js/mobilepay.js');
+        }
     }
 
     public function hookPaymentTop()
@@ -1344,6 +1387,11 @@ class QuickPay extends PaymentModule
             if ($vars->var_name == 'swish' &&
                 empty($cart->qpPreview) &&
                 $invoice_country_code != 'SWE') {
+                continue;
+            }
+            if ($vars->var_name == 'vipps' &&
+                empty($cart->qpPreview) &&
+                $invoice_country_code != 'NOR') {
                 continue;
             }
             if ($vars->var_name == 'viabill') {
@@ -2017,8 +2065,9 @@ class QuickPay extends PaymentModule
         $this->getSetup();
         $new_state = $params['newOrderStatus'];
         $order = new Order($params['id_order']);
-        $capture_statue = Configuration::get('_QUICKPAY_STATECAPTURE');
-        if ($capture_statue == $new_state->id) {
+        $capture_state = Configuration::get('_QUICKPAY_STATECAPTURE');
+        $capture_state2 = Configuration::get('_QUICKPAY_STATECAPTURE2');
+        if ($capture_state == $new_state->id || $capture_state2 == $new_state->id) {
             $trans = Db::getInstance()->getRow(
                 'SELECT *
                 FROM '._DB_PREFIX_.'quickpay_execution
@@ -2060,7 +2109,15 @@ class QuickPay extends PaymentModule
             'mobilepay_checkout' => 1
         );
         $payment_url = $this->getModuleLink('payment', $parms);
-        $this->context->smarty->assign('payment_url', $payment_url);
+        $mobilepay_url = $this->getModuleLink('mobilepay');
+        $id_cms = (int)$this->getConf('_QUICKPAY_CMS_ID');
+        $this->context->smarty->assign(
+            array(
+                'payment_url' => $payment_url,
+                'mobilepay_url' => $mobilepay_url,
+                'id_cms' => $id_cms
+            )
+        );
         return $this->display(__FILE__, 'mobilepay.tpl');
     }
 
@@ -2267,6 +2324,43 @@ class QuickPay extends PaymentModule
             die($vars->message);
         }
         Tools::redirect($vars->url, '');
+    }
+
+    public function mobilePay()
+    {
+        $cart = $this->context->cart;
+        $delivery_option = $cart->getDeliveryOption();
+        $carrier = new Carrier((int)reset($delivery_option));
+        $id_lang = (int)$cart->id_lang;
+        $prefix = $this->getConf('_QUICKPAY_ORDER_PREFIX');
+        $order_id = $prefix.(int)$cart->id;
+        $id_cms = (int)$this->getConf('_QUICKPAY_CMS_ID');
+        $links = CMS::getLinks(
+            Context::getContext()->language->id,
+            array($id_cms)
+        );
+        $link = reset($links);
+        if (isset($link['link'])) {
+            $mobilepay_link = $link['link'];
+        } else {
+            $mobilepay_link = '';
+        }
+        $parms = array(
+            'option' => 'mobilepay',
+            'order_id' => $order_id,
+            'mobilepay_checkout' => 1
+        );
+        $payment_url = $this->getModuleLink('payment', $parms);
+        $this->context->smarty->assign(
+            array(
+                'payment_url' => $payment_url,
+                'mobilepay_link' => $mobilepay_link,
+                'carrier_name' => $carrier->name,
+                'carrier_delay' => $carrier->delay[$id_lang]
+            )
+        );
+        print $this->display(__FILE__, 'mobilepay.tpl');
+        exit;
     }
 
     public function addCustomer($vars, &$cart)

@@ -25,3 +25,13 @@ p.payment_module.quickpay a:after {
 	width: 14px;
 	color: #777;
 }
+a.mobilepay-checkout img {
+    height: 20px;
+}
+
+.mobilepay-confirm .ui-icon {
+    display: inline-block;
+    float: left;
+    margin-top: 2px;
+    margin-right: 2px;
+}

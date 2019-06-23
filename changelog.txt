@@ -170,3 +170,10 @@ Version 4.0.45
 2019-01-07 2019-01-14
 Fixed phone number for MobilePay Checkout.
 MobilePay Checkout option was not always properly disabled.
+Version 4.0.46
+2019-01-14 2019-06-23
+Added confirmation page for MobilePay Checkout
+Added Resurs Bank and Vipps
+Added alternative state for capture
+Added support for Dankort 3D
+Updated logos (Maestro/Mastercard)

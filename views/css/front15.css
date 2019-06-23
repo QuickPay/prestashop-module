@@ -11,3 +11,10 @@ p.payment_module.quickpay a {
 p.payment_module.quickpay img {
 	margin: 1px 2px 1px 0px;
 }
+
+.mobilepay-confirm span.ui-icon {
+    display: inline-block;
+    float: left;
+    margin-top: 0px;
+    margin-right: 2px;
+}
