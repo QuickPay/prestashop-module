@@ -6,7 +6,7 @@
 *  @copyright 2015 QuickPay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2019/06/23 05:58:45 $
+*  $Date: 2019/06/25 15:11:23 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.46';
+        $this->version = '4.0.47';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -512,9 +512,7 @@ class QuickPay extends PaymentModule
         }
 
         $this->context->smarty->assign('module_dir', $this->_path);
-        $this->context->smarty->clearCompiledTemplate(
-            $this->local_path.'views/templates/hook/quickpay.tpl'
-        );
+        $this->context->smarty->clearCompiledTemplate();
 
         $output .= $this->context->smarty->fetch(
             $this->local_path.'views/templates/admin/configure.tpl'

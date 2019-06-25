@@ -177,3 +177,6 @@ Added Resurs Bank and Vipps
 Added alternative state for capture
 Added support for Dankort 3D
 Updated logos (Maestro/Mastercard)
+Version 4.0.47
+2019-06-23 2019-06-25
+Clean template cache
