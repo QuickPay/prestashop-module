@@ -165,6 +165,7 @@ $_MODULE['<{quickpay}prestashop>list_b9f5c797ebbf55adccdd8539a65a0241'] = 'Deakt
 $_MODULE['<{quickpay}prestashop>mobilepay_ad88a6c9e8c880f23639321d78ec859d'] = 'Jeg accepterer handelsbetingelserne.';
 $_MODULE['<{quickpay}prestashop>mobilepay_af5479ae042d5839971b43f024693eb1'] = 'Læs mere om vores';
 $_MODULE['<{quickpay}prestashop>mobilepay_f4af8b5789576c000ce9105b25609bd6'] = 'betingelser';
+$_MODULE['<{quickpay}prestashop>mobilepay_059d7f11bd3b966aa44800623c403ed0'] = 'Når du betaler med MobilePay Checkout, vælger du din leveringsadresse i MobilePay.';
 $_MODULE['<{quickpay}prestashop>mobilepay_f7cd9e59f2f6e354d66bacebb0f40d5a'] = 'Leveringsmetode:';
 $_MODULE['<{quickpay}prestashop>mobilepay_2a08bd3364d511e7573f0ebdbeda7c3d'] = 'Leveringstid:';
 $_MODULE['<{quickpay}prestashop>mobilepay_693a88377e00001606b66cf4f1fa5927'] = 'MobilePay Checkout';

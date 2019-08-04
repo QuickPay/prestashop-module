@@ -1,6 +1,6 @@
 {*
 * NOTICE OF LICENSE
-* $Date: 2019/06/23 05:15:20 $
+* $Date: 2019/07/27 06:27:24 $
 * Written by Kjeld Borch Egevang
 * E-mail: helpdesk@quickpay.net
 *}
@@ -18,6 +18,9 @@
     </p>
     {/if}
     {if $carrier_name}
+    <p>
+    {l s='Delivery address is selected in MobilePay when payment is done with MobilePay Checkout.' mod='quickpay'}
+    </p>
     <p>
     {l s='Delivery method:' mod='quickpay'}
     <br>
