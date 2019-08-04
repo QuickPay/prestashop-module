@@ -180,3 +180,6 @@ Updated logos (Maestro/Mastercard)
 Version 4.0.47
 2019-06-23 2019-06-25
 Clean template cache
+Version 4.0.48
+2019-06-25 2019-08-04
+Added delivery address text for MobilePay Checkout
