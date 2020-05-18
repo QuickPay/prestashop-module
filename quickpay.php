@@ -6,7 +6,7 @@
 *  @copyright 2015 QuickPay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2019/08/04 07:03:18 $
+*  $Date: 2020/05/18 04:25:36 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.48';
+        $this->version = '4.0.49';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -2065,7 +2065,8 @@ class QuickPay extends PaymentModule
         $order = new Order($params['id_order']);
         $capture_state = Configuration::get('_QUICKPAY_STATECAPTURE');
         $capture_state2 = Configuration::get('_QUICKPAY_STATECAPTURE2');
-        if ($capture_state == $new_state->id || $capture_state2 == $new_state->id) {
+        $cancelled = $new_state->id == _PS_OS_CANCELED_;
+        if ($capture_state == $new_state->id || $capture_state2 == $new_state->id || $cancelled) {
             $trans = Db::getInstance()->getRow(
                 'SELECT *
                 FROM '._DB_PREFIX_.'quickpay_execution
@@ -2082,7 +2083,11 @@ class QuickPay extends PaymentModule
                         $amount = $amount_order;
                     }
                     $fields = array('amount='.$amount);
-                    $this->doCurl('payments/'.$trans['trans_id'].'/capture', $fields);
+                    if ($cancelled) {
+                        $this->doCurl('payments/'.$trans['trans_id'].'/cancel', null, 'POST');
+                    } else {
+                        $this->doCurl('payments/'.$trans['trans_id'].'/capture', $fields);
+                    }
                 }
             }
         }
@@ -2479,7 +2484,7 @@ class QuickPay extends PaymentModule
         $this->context->cart = $cart;
     }
 
-    public function validate($json, $checksum, $id_order_state = _PS_OS_PAYMENT_)
+    public function validate($json, $checksum, $id_order_state = _PS_OS_PAYMENT_, $callback = false)
     {
         $this->getSetup();
         if ($checksum != $this->sign($json, $this->setup->private_key)) {
@@ -2498,6 +2503,7 @@ class QuickPay extends PaymentModule
         $test_mode = $vars->test_mode ? 1 : 0;
         $id_cart = (int)Tools::substr($vars->order_id, 3);
         $cart = new Cart($id_cart);
+        $this->context->cart = $cart;
         if (!empty($vars->link->invoice_address_selection)) {
             // MobilePay Checkout
             $this->addCustomer($vars, $cart);
@@ -2516,6 +2522,12 @@ class QuickPay extends PaymentModule
             $msg = 'QuickPay: Validate error. Not a valid cart';
             $this->addLog($msg, 2, 0, 'Cart', $id_cart);
             die('Not a valid cart');
+        }
+        if ($callback && isset($vars->operations)) {
+            $operation = end($vars->operations);
+            if ($operation->type == 'capture') {
+                die('Callback type is capture');
+            }
         }
         if ($cart->OrderExists() != 0) {
             die('Order already exists');
