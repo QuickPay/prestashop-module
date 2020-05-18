@@ -183,3 +183,9 @@ Clean template cache
 Version 4.0.48
 2019-06-25 2019-08-04
 Added delivery address text for MobilePay Checkout
+Version 4.0.49
+2019-08-04 2020-05-17
+File: quickpay.php
+Setup cart in context to satisfy some OPC modules
+Support for automatic cancelling of payments
+Ignore callback with operation type capture
