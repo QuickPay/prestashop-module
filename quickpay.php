@@ -6,7 +6,7 @@
 *  @copyright 2015 QuickPay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2020/05/18 04:25:36 $
+*  $Date: 2020/10/05 03:37:27 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.49';
+        $this->version = '4.0.51';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -200,7 +200,7 @@ class QuickPay extends PaymentModule
             array('_QUICKPAY_SWISH', 'swish',
                     $this->l('Swish'), 0, 'swish'),
             array('_QUICKPAY_KLARNA', 'klarna',
-                    $this->l('Klarna'), 0, 'klarna'),
+                    $this->l('Klarna'), 0, 'klarna-payments'),
             array('_QUICKPAY_FORBRUGS_1886', 'f1886',
                     $this->l('Forbrugsforeningen af 1886'), 0, 'fbg1886'),
             array('_QUICKPAY_DINERS', 'diners',
@@ -2647,7 +2647,11 @@ class QuickPay extends PaymentModule
     public function addFee(&$cart, $fee)
     {
         $id_lang = (int)$cart->id_lang;
-        $txt = $this->l('Credit card fee', $this->name, $id_lang);
+        if ($this->v16) {
+            $txt = $this->l('Credit card fee', $this->name);
+        } else {
+            $txt = $this->l('Credit card fee', $this->name, $id_lang);
+        }
         $row = Db::getInstance()->getRow(
             'SELECT `id_product`
             FROM '._DB_PREFIX_.'product
@@ -2676,7 +2680,12 @@ class QuickPay extends PaymentModule
         $product->link_rewrite = array();
         foreach (Language::getLanguages(false) as $lang) {
             $id_lang = $lang['id_lang'];
-            $product->name[$id_lang] = $this->l('Credit card fee', $this->name, $id_lang);
+            if ($this->v16) {
+                $txt = $this->l('Credit card fee', $this->name);
+            } else {
+                $txt = $this->l('Credit card fee', $this->name, $id_lang);
+            }
+            $product->name[$id_lang] = $txt;
             $product->link_rewrite[$id_lang] = 'fee';
         }
         $product->active = 0;

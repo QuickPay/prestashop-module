@@ -188,3 +188,9 @@ Version 4.0.49
 Setup cart in context to satisfy some OPC modules
 Support for automatic cancelling of payments
 Ignore callback with operation type capture
+Version 4.0.50
+2020-05-18 2020-09-28
+Renamed payment method from "klarna" to "klarna-payments"
+Version 4.0.51
+2020-09-28 2020-10-07
+Fixed usage of translation method
