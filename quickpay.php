@@ -6,7 +6,7 @@
 *  @copyright 2015 QuickPay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2020/10/05 03:37:27 $
+*  $Date: 2020/12/15 08:05:55 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,11 +19,12 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.51';
+        $this->version = '4.0.52';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
         $this->v17 = _PS_VERSION_ >= '1.7.0.0';
+        $this->v177 = _PS_VERSION_ >= '1.7.7.0';
         $this->author = 'Kjeld Borch Egevang';
         $this->module_key = 'b99f59b30267e81da96b12a8d1aa5bac';
         $this->need_instance = 0;
@@ -99,7 +100,8 @@ class QuickPay extends PaymentModule
             $this->registerHook('header') &&
             $this->registerHook('leftColumn') &&
             $this->registerHook('footer') &&
-            $this->registerHook('adminOrder') &&
+            ($this->v177 || $this->registerHook('displayAdminOrder')) &&
+            (!$this->v177 || $this->registerHook('displayAdminOrderSide')) &&
             $this->registerHook('paymentReturn') &&
             $this->registerHook('PDFInvoice') &&
             $this->registerHook('postUpdateOrderStatus') &&
@@ -175,7 +177,9 @@ class QuickPay extends PaymentModule
             array('_QUICKPAY_STATECAPTURE', 'statecapture',
                     $this->l('Capture payments in state'), 0, ''),
             array('_QUICKPAY_STATECAPTURE2', 'statecapture2',
-                    $this->l('Alternative state for payment capture'), 0, ''),
+                    $this->l('Capture payments in state'), 0, ''),
+            array('_QUICKPAY_STATECAPTURE3', 'statecapture3',
+                    $this->l('Capture payments in state'), 0, ''),
             array('_QUICKPAY_BRANDING', 'branding',
                     $this->l('Branding in payment window'), 0, ''),
             array('_QUICKPAY_FEE_TAX', 'feetax',
@@ -496,6 +500,9 @@ class QuickPay extends PaymentModule
             if (!$this->v17 && !$this->isRegisteredInHook(Hook::getIdByName('shoppingCartExtra'))) {
                 $this->registerHook('shoppingCartExtra');
             }
+            if ($this->v177 && !$this->isRegisteredInHook(Hook::getIdByName('displayAdminOrderSide'))) {
+                $this->registerHook('displayAdminOrderSide');
+            }
             $this->context->controller->addJqueryUI('ui.sortable');
         } else {
             // Old PrestaShop
@@ -632,6 +639,7 @@ class QuickPay extends PaymentModule
             $vars->var_name != 'orderprefix' &&
             $vars->var_name != 'statecapture' &&
             $vars->var_name != 'statecapture2' &&
+            $vars->var_name != 'statecapture3' &&
             $vars->var_name != 'branding' &&
             $vars->var_name != 'feetax' &&
             $vars->var_name != 'cmsid';
@@ -817,7 +825,7 @@ class QuickPay extends PaymentModule
             if ($vars->card_type_lock) {
                 continue;
             }
-            if ($vars->var_name == 'statecapture' || $vars->var_name == 'statecapture2') {
+            if ($vars->var_name == 'statecapture' || $vars->var_name == 'statecapture2' || $vars->var_name == 'statecapture3') {
                 $inputs[] = $this->getStatesInput($vars);
                 continue;
             }
@@ -1667,7 +1675,7 @@ class QuickPay extends PaymentModule
         return $this->display(__FILE__, 'views/templates/hook/confirmation.tpl');
     }
 
-    public function hookAdminOrder($params)
+    public function hookDisplayAdminOrderSide($params)
     {
         $order = new Order((int)$params['id_order']);
         if ($this->v15) {
@@ -1708,7 +1716,12 @@ class QuickPay extends PaymentModule
             $trans_id = $vars->id;
             $order_id = $vars->order_id;
         }
-        if ($this->v16) {
+        if ($this->v177) {
+            $html = '<div class="card"><div class="card-header">
+                <h3><img src="'.$this->_path.'logo.gif" />
+                '.$this->l('QuickPay').'</h3></div>
+                <div class="card-body">';
+        } elseif ($this->v16) {
             $html = '<div class="row"><div class="col-lg-5 panel">
                 <div class="panel-heading"><img src="'.$this->_path.'logo.gif" />
                 '.$this->l('QuickPay API').'</div>';
@@ -1996,6 +2009,14 @@ class QuickPay extends PaymentModule
         return $html;
     }
 
+    public function hookDisplayAdminOrder($params)
+    {
+        if ($this->v177) {
+            return '';
+        } else {
+            return $this->hookDisplayAdminOrderSide($params);
+        }
+    }
 
     public function hookPDFInvoice($params)
     {
@@ -2065,8 +2086,9 @@ class QuickPay extends PaymentModule
         $order = new Order($params['id_order']);
         $capture_state = Configuration::get('_QUICKPAY_STATECAPTURE');
         $capture_state2 = Configuration::get('_QUICKPAY_STATECAPTURE2');
+        $capture_state3 = Configuration::get('_QUICKPAY_STATECAPTURE3');
         $cancelled = $new_state->id == _PS_OS_CANCELED_;
-        if ($capture_state == $new_state->id || $capture_state2 == $new_state->id || $cancelled) {
+        if ($capture_state == $new_state->id || $capture_state2 == $new_state->id || $capture_state3 == $new_state->id || $cancelled) {
             $trans = Db::getInstance()->getRow(
                 'SELECT *
                 FROM '._DB_PREFIX_.'quickpay_execution
@@ -2236,6 +2258,19 @@ class QuickPay extends PaymentModule
                     'basket[][item_no]' => $product['id_product'],
                     'basket[][item_name]' => $product['name'],
                     'basket[][item_price]' => $this->toQpAmount($product['price_wt'], $currency),
+                    'basket[][vat_rate]' => $product['rate'] / 100
+                );
+                foreach ($info as $k => $v) {
+                    $fields[] = $k.'='.urlencode($v);
+                }
+            }
+            $total_discounts = $cart->getOrderTotal(true, Cart::ONLY_DISCOUNTS);
+            if ($total_discounts > 0) {
+                $info = array(
+                    'basket[][qty]' => 1,
+                    'basket[][item_no]' => 0,
+                    'basket[][item_name]' => $this->l('Discount', $this->name),
+                    'basket[][item_price]' => -$this->toQpAmount($total_discounts, $currency),
                     'basket[][vat_rate]' => $product['rate'] / 100
                 );
                 foreach ($info as $k => $v) {
@@ -2541,11 +2576,20 @@ class QuickPay extends PaymentModule
             );
             $this->addLog($msg, 2, 0, 'Cart', $id_cart);
         }
-        if ($this->v15) {
+        if ($this->v15 && !$this->v177) {
             Shop::setContext(Shop::CONTEXT_SHOP, $cart->id_shop);
             $customer = new Customer((int)$cart->id_customer);
+            
             Context::getContext()->customer = $customer;
             Context::getContext()->currency = $currency;
+        }
+        if ($this->v17 && !$this->v177) {
+            global $kernel;
+            if (!$kernel) {
+                require_once _PS_ROOT_DIR_.'/app/AppKernel.php';
+                $kernel = new \AppKernel('prod', false);
+                $kernel->boot();
+            }
         }
         $trans = Db::getInstance()->getRow(
             'SELECT *

@@ -194,3 +194,6 @@ Renamed payment method from "klarna" to "klarna-payments"
 Version 4.0.51
 2020-09-28 2020-10-07
 Fixed usage of translation method
+Version 4.0.52
+2020-12-05 2020-12-15
+Updated for PrestaShop 1.7.7.0
