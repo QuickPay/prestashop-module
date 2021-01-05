@@ -197,3 +197,7 @@ Fixed usage of translation method
 Version 4.0.52
 2020-12-05 2020-12-15
 Updated for PrestaShop 1.7.7.0
+Version 4.0.53
+2020-12-15 2021-01-05
+File: quickpay.php
+Added GL and removed NO for MobilePay

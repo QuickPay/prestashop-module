@@ -6,7 +6,7 @@
 *  @copyright 2015 QuickPay
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *
-*  $Date: 2020/12/15 08:05:55 $
+*  $Date: 2021/01/05 08:05:42 $
 *  E-mail: helpdesk@quickpay.net
 */
 
@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.0.52';
+        $this->version = '4.0.53';
         $this->v14 = _PS_VERSION_ >= '1.4.1.0';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
@@ -1178,7 +1178,7 @@ class QuickPay extends PaymentModule
     public function getIso2($iso_code)
     {
         $iso2 = array(
-            'DNK' => 'DK', 'FIN' => 'FI', 'NOR' => 'NO'
+            'DNK' => 'DK', 'FIN' => 'FI', 'GRL' => 'GL'
         );
         if (isset($iso2[$iso_code])) {
             return $iso2[$iso_code];
@@ -1386,7 +1386,7 @@ class QuickPay extends PaymentModule
             if ($vars->var_name == 'mobilepay' &&
                 empty($cart->qpPreview) &&
                 $invoice_country_code != 'DNK' &&
-                $invoice_country_code != 'NOR' &&
+                $invoice_country_code != 'GRL' &&
                 $invoice_country_code != 'FIN') {
                 continue;
             }
@@ -2123,7 +2123,7 @@ class QuickPay extends PaymentModule
         $cart = $params['cart'];
         $invoice_address = new Address((int)$cart->id_address_invoice);
         $country = new Country($invoice_address->id_country);
-        if ($country->iso_code && !in_array($country->iso_code, array('DK', 'FI', 'NO'))) {
+        if ($country->iso_code && !in_array($country->iso_code, array('DK', 'FI', 'GL'))) {
             return '';
         }
         $prefix = $this->getConf('_QUICKPAY_ORDER_PREFIX');
