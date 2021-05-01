@@ -1,18 +1,15 @@
 <?php
 /**
- * NOTICE OF LICENSE
- *
- *  @author    Kjeld Borch Egevang
- *  @copyright 2015 QuickPay
- *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
- *
- *  $Date: 2019/01/07 06:37:33 $
- *  E-mail: helpdesk@quickpay.net
- */
+* NOTICE OF LICENSE
+*
+*  @author    Kjeld Borch Egevang
+*  @copyright 2020 QuickPay
+*  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*
+*  $Date: 2021/01/05 08:05:42 $
+*  E-mail: support@quickpay.net
+*/
 
-/**
- * @since 1.5.0
- */
 class QuickPayCompleteModuleFrontController extends ModuleFrontController
 {
     public function init()
@@ -43,7 +40,12 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
             $json = Tools::jsonEncode($vars);
             if ($vars->accepted == 1) {
                 $checksum = $quickpay->sign($json, $setup->private_key);
-                $quickpay->validate($json, $checksum);
+                $header = array('Quickpay-checksum-sha256: '.$checksum);
+                if (Configuration::get('PS_SHOP_ENABLE')) {
+                    $this->doCurl($vars->link->callback_url, $json, $header);
+                } else {
+                    die('Shop is in maintenance');
+                }
             }
         }
         unset($this->context->cookie->id_cart);
@@ -79,5 +81,15 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
             '&id_order='.$id_order.
             '&key='.$key
         );
+    }
+
+
+    public function doCurl($url, $json, $header)
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+        curl_exec($ch);
     }
 }

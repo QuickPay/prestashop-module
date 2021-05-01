@@ -199,5 +199,9 @@ Version 4.0.52
 Updated for PrestaShop 1.7.7.0
 Version 4.0.53
 2020-12-15 2021-01-05
-File: quickpay.php
+Version 4.1.0
 Added GL and removed NO for MobilePay
+Fixed currency problem for PrestaShop 1.7.7
+Added ANYDAY Split
+Updated for Unzer release
+Use curl for local validation

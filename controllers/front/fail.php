@@ -1,18 +1,15 @@
 <?php
 /**
- * NOTICE OF LICENSE
- *
- *  @author    Kjeld Borch Egevang
- *  @copyright 2015 QuickPay
- *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
- *
- *  $Date: 2019/01/07 06:37:33 $
- *  E-mail: helpdesk@quickpay.net
- */
+* NOTICE OF LICENSE
+*
+*  @author    Kjeld Borch Egevang
+*  @copyright 2020 QuickPay
+*  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*
+*  $Date: 2021/01/05 08:05:42 $
+*  E-mail: support@quickpay.net
+*/
 
-/**
- * @since 1.5.0
- */
 class QuickPayFailModuleFrontController extends ModuleFrontController
 {
     public function initContent()
