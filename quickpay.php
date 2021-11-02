@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.2';
+        $this->version = '4.1.4';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
         $this->v17 = _PS_VERSION_ >= '1.7.0.0';
@@ -2335,6 +2335,7 @@ class QuickPay extends PaymentModule
         $cart->secure_key = $customer->secure_key;
         $cart->id_customer = $customer->id;
         $cart->id_currency = Currency::getIdByIsoCode($vars->currency);
+        $phone_number = '';
         if ($vars->invoice_address) {
             $id_country = Country::getByIso($this->getIso2($vars->invoice_address->country_code));
             $address1 = $vars->invoice_address->street;
@@ -2364,8 +2365,9 @@ class QuickPay extends PaymentModule
             $address->address1 = $address1;
             $address->postcode = $vars->invoice_address->zip_code;
             $address->city = $vars->invoice_address->city;
-            $address->phone = $vars->invoice_address->phone_number;
-            $address->phone_mobile = $vars->invoice_address->phone_number;
+            $phone_number = $vars->invoice_address->phone_number;
+            $address->phone = $phone_number;
+            $address->phone_mobile = $phone_number;
             if ($row) {
                 $address->update();
             } else {
@@ -2403,8 +2405,11 @@ class QuickPay extends PaymentModule
             $address->address1 = $address1;
             $address->postcode = $vars->shipping_address->zip_code;
             $address->city = $vars->shipping_address->city;
-            $address->phone = $vars->shipping_address->phone_number;
-            $address->phone_mobile = $vars->shipping_address->phone_number;
+            if ($vars->shipping_address->phone_number) {
+                $phone_number = $vars->shipping_address->phone_number;
+            }
+            $address->phone = $phone_number;
+            $address->phone_mobile = $phone_number;
             if ($row) {
                 $address->update();
             } else {
