@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.4';
+        $this->version = '4.1.5';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
         $this->v17 = _PS_VERSION_ >= '1.7.0.0';
@@ -208,7 +208,7 @@ class QuickPay extends PaymentModule
             array('_QUICKPAY_SOFORT', 'sofort',
                 $this->l('Sofort'), 0, 'sofort'),
             array('_QUICKPAY_APPLEPAY', 'applepay',
-                $this->l('Apple Pay'), 0, 'applepay'),
+                $this->l('Apple Pay'), 0, 'apple-pay'),
             array('_QUICKPAY_BITCOIN', 'bitcoin',
                 $this->l('Bitcoin'), 0, 'bitcoin'),
             array('_QUICKPAY_VIPPS', 'vipps',
@@ -233,8 +233,7 @@ class QuickPay extends PaymentModule
             'mastercarddebet',
             'maestro',
             'diners',
-            'jcb',
-            'applepay'
+            'jcb'
         );
         $credit_cards2d = array(
             'visa_3d' => 'visa',
@@ -277,9 +276,6 @@ class QuickPay extends PaymentModule
                     } else {
                         $this->setup->$field = 2;
                     }
-                }
-                if ($vars->var_name == 'applepay') {
-                    $this->setup->$field = 2;
                 }
                 if ($this->setup->$field) {
                     $this->setup->credit_cards[$vars->var_name] = $vars->card_text;
@@ -897,13 +893,16 @@ class QuickPay extends PaymentModule
         return Tools::jsonDecode($data);
     }
 
-    public function getCurlHandle($resource, $fields = null, $method = null)
+    public function getCurlHandle($resource, $fields = null, $method = null, $callback_url = null)
     {
         $ch = curl_init();
         $header = array();
         $header[] = 'Authorization: Basic '.
             call_user_func('base64_encode', ':'.$this->setup->user_key);
         $header[] = 'Accept-Version: v10';
+        if ($callback_url) {
+            $header[] = 'QuickPay-Callback-Url: '.$callback_url;
+        }
         $url = 'https://api.quickpay.net/'.$resource;
         if ($method == null) {
             if ($fields) {
@@ -925,9 +924,9 @@ class QuickPay extends PaymentModule
         return $ch;
     }
 
-    public function doCurl($resource, $fields = null, $method = null)
+    public function doCurl($resource, $fields = null, $method = null, $callback_url = null)
     {
-        $ch = $this->getCurlHandle($resource, $fields, $method);
+        $ch = $this->getCurlHandle($resource, $fields, $method, $callback_url);
         $data = curl_exec($ch);
         if (!$data) {
             $this->qp_error = curl_error($ch);
@@ -1022,9 +1021,6 @@ class QuickPay extends PaymentModule
             $vars = $this->varsObj($setup_var);
             $var_name = $vars->var_name;
             $field = $var_name;
-            if (!$setup->autoget && $vars->var_name == 'applepay') {
-                continue;
-            }
             if (!$vars->card_type_lock || !$setup->$field) {
                 continue;
             }
@@ -1302,9 +1298,6 @@ class QuickPay extends PaymentModule
             $card_list = array($vars->var_name);
             $card_text = $vars->card_text;
             $field = $vars->var_name;
-            if (!$setup->autoget && $vars->var_name == 'applepay') {
-                continue;
-            }
             if (!$vars->card_type_lock || !$setup->$field) {
                 continue;
             }
@@ -1688,8 +1681,9 @@ class QuickPay extends PaymentModule
             $amount = Tools::getValue('acramount');
             $amount = $this->fromUserAmount($amount, $currency);
             $amount = $this->toQpAmount($amount, $currency);
+            $callbackurl = $this->getModuleLink('validation');
             $fields = array('amount='.$amount);
-            $action_data = $this->doCurl('payments/'.$trans_id.'/capture', $fields);
+            $action_data = $this->doCurl('payments/'.$trans_id.'/capture', $fields, 'POST', $callbackurl);
             // $html .= '<pre>'.print_r(json_decode($action_data), true).'</pre>';
         }
 
@@ -2007,6 +2001,7 @@ class QuickPay extends PaymentModule
             if ($trans) {
                 $vars = $this->jsonDecode($trans['json']);
                 $amount = $this->getAmount($vars);
+                $callbackurl = $this->getModuleLink('validation');
                 if ($amount) {
                     $currency = new Currency((int)$order->id_currency);
                     $amount_order = $this->toQpAmount($order->total_paid, $currency);
@@ -2017,7 +2012,7 @@ class QuickPay extends PaymentModule
                     if ($cancelled) {
                         $this->doCurl('payments/'.$trans['trans_id'].'/cancel', null, 'POST');
                     } else {
-                        $this->doCurl('payments/'.$trans['trans_id'].'/capture', $fields);
+                        $this->doCurl('payments/'.$trans['trans_id'].'/capture', $fields, 'POST', $callbackurl);
                     }
                 }
             }
@@ -2475,6 +2470,10 @@ class QuickPay extends PaymentModule
         if ($callback && isset($vars->operations)) {
             $operation = end($vars->operations);
             if ($operation->type == 'capture') {
+                if ($operation->qp_status_code != '20000') {
+                    $msg = 'QuickPay: Capture error: '.$operation->qp_status_msg;
+                    $this->addLog($msg, 3, 0, 'Cart', $id_cart);
+                }
                 die('Callback type is capture');
             }
         }
