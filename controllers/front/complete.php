@@ -17,7 +17,6 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
         $id_cart = (int)Tools::getValue('id_cart');
         $id_module = (int)Tools::getValue('id_module');
         $key = Tools::getValue('key');
-        $key2 = Tools::getValue('key2');
         if (!$id_module || !$key) {
             Tools::redirect('history.php');
         }
@@ -56,7 +55,7 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
         }
         $order = new Order((int)$id_order);
         $customer = new Customer($order->id_customer);
-        if ($key2) {
+        if (!$this->context->cookie->id_customer) {
             $quickpay = new QuickPay();
             $trans = Db::getInstance()->getRow('SELECT *
                 FROM '._DB_PREFIX_.'quickpay_execution

@@ -205,3 +205,5 @@ Fixed currency problem for PrestaShop 1.7.7
 Added ANYDAY Split
 Updated for Unzer release
 Use curl for local validation
+Version 4.1.6
+Fix problem with order complete when MobilePay switches to default browser
