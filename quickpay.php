@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.6';
+        $this->version = '4.1.7';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
         $this->v17 = _PS_VERSION_ >= '1.7.0.0';
@@ -153,10 +153,6 @@ class QuickPay extends PaymentModule
                 $this->l('Auto-capture payments'), 0, ''),
             array('_QUICKPAY_STATECAPTURE', 'statecapture',
                 $this->l('Capture payments in state'), 0, ''),
-            array('_QUICKPAY_STATECAPTURE2', 'statecapture2',
-                $this->l('Capture payments in state'), 0, ''),
-            array('_QUICKPAY_STATECAPTURE3', 'statecapture3',
-                $this->l('Capture payments in state'), 0, ''),
             array('_QUICKPAY_BRANDING', 'branding',
                 $this->l('Branding in payment window'), 0, ''),
             array('_QUICKPAY_FEE_TAX', 'feetax',
@@ -266,8 +262,29 @@ class QuickPay extends PaymentModule
             $field = $vars->var_name;
             $this->setup->$field = $this->getConf($vars->glob_name);
             $this->setup->card_texts[$vars->var_name] = $vars->card_text;
-            if ($vars->var_name == 'maestro_3d') {
+            if ($field == 'maestro_3d') {
                 $this->setup->card_texts['maestro'] = $this->l('Maestro');
+            }
+            elseif ($field == 'statecapture') {
+                // Backwards compatibility
+                $capture_state2 = Configuration::get('_QUICKPAY_STATECAPTURE2');
+                $capture_state3 = Configuration::get('_QUICKPAY_STATECAPTURE3');
+                if ($capture_state2 || $capture_state3) {
+                    $ids = array();
+                    if ($this->setup->$field) {
+                        $ids[] = $this->setup->$field;
+                    }
+                    if ($capture_state2) {
+                        $ids[] = $capture_state2;
+                    }
+                    if ($capture_state3) {
+                        $ids[] = $capture_state3;
+                    }
+                    $this->setup->$field = implode(',', $ids);
+                    Configuration::updateValue($vars->glob_name, $this->setup->$field);
+                    Configuration::updateValue('_QUICKPAY_STATECAPTURE2', 0);
+                    Configuration::updateValue('_QUICKPAY_STATECAPTURE3', 0);
+                }
             }
             if (in_array($vars->var_name, $all_cards)) {
                 if ($autoget && $combine) {
@@ -575,8 +592,6 @@ class QuickPay extends PaymentModule
         return $vars->def_val !== '' &&
             $vars->var_name != 'orderprefix' &&
             $vars->var_name != 'statecapture' &&
-            $vars->var_name != 'statecapture2' &&
-            $vars->var_name != 'statecapture3' &&
             $vars->var_name != 'branding' &&
             $vars->var_name != 'feetax' &&
             $vars->var_name != 'cmsid';
@@ -656,7 +671,6 @@ class QuickPay extends PaymentModule
     {
         $order_states = OrderState::getOrderStates($this->context->language->id);
         $query = array();
-        $query[] = array('id' => 0,  'name' => $this->l('Never'));
         foreach ($order_states as $order_state) {
             $query[] = array(
                 'id' => $order_state['id_order_state'],
@@ -664,14 +678,20 @@ class QuickPay extends PaymentModule
             );
         }
         $input = array(
-            'type' => 'select',
+            'type' => 'checkbox',
             'name' => $vars->glob_name,
             'label' => $vars->card_text,
-            'options' => array(
-                'query' =>  $query,
+            'values' => array(
+                'query' => $query,
                 'id' => 'id',
                 'name' => 'name'
-            )
+            ),
+            'expand' => array(
+                'print_total' => count($query),
+                'default' => 'show',
+                'show' => array('text' => $this->l('show'), 'icon' => 'plus-sign-alt'),
+                'hide' => array('text' => $this->l('hide'), 'icon' => 'minus-sign-alt')
+            ),
         );
         return $input;
     }
@@ -722,7 +742,7 @@ class QuickPay extends PaymentModule
             'name' => $vars->glob_name,
             'label' => $vars->card_text,
             'options' => array(
-                'query' =>  $query,
+                'query' => $query,
                 'id' => 'id',
                 'name' => 'name'
             )
@@ -762,7 +782,7 @@ class QuickPay extends PaymentModule
             if ($vars->card_type_lock) {
                 continue;
             }
-            if ($vars->var_name == 'statecapture' || $vars->var_name == 'statecapture2' || $vars->var_name == 'statecapture3') {
+            if ($vars->var_name == 'statecapture') {
                 $inputs[] = $this->getStatesInput($vars);
                 continue;
             }
@@ -780,6 +800,7 @@ class QuickPay extends PaymentModule
             }
             $inputs[] = $this->getConfigInput($vars);
         }
+
         $submit = array(
             'title' => $this->l('Save'),
         );
@@ -803,6 +824,11 @@ class QuickPay extends PaymentModule
             $field = $vars->var_name;
             if ($this->useCheckBox($vars)) {
                 $values[$vars->glob_name] = $setup->$field ? 1 : 0;
+            } elseif ($vars->var_name == 'statecapture') {
+                $ids = explode(',', $setup->$field);
+                foreach ($ids as $id) {
+                    $values[$vars->glob_name.'_'.$id] = true;
+                }
             } else {
                 $values[$vars->glob_name] = $setup->$field;
             }
@@ -837,6 +863,18 @@ class QuickPay extends PaymentModule
             foreach ($this->setup_vars as $setup_var) {
                 $vars = $this->varsObj($setup_var);
                 if ($vars->card_type_lock) {
+                    continue;
+                }
+                if ($vars->var_name == 'statecapture') {
+                    $values = array();
+                    $order_states = OrderState::getOrderStates($this->context->language->id);
+                    foreach ($order_states as $order_state) {
+                        $id = $order_state['id_order_state'];
+                        if (Tools::getValue($vars->glob_name.'_'.$id)) {
+                            $values[] = $id;
+                        }
+                    }
+                    Configuration::updateValue($vars->glob_name, implode(',', $values));
                     continue;
                 }
                 if (Tools::getValue($vars->glob_name, null) !== null) {
@@ -1987,11 +2025,9 @@ class QuickPay extends PaymentModule
         $this->getSetup();
         $new_state = $params['newOrderStatus'];
         $order = new Order($params['id_order']);
-        $capture_state = Configuration::get('_QUICKPAY_STATECAPTURE');
-        $capture_state2 = Configuration::get('_QUICKPAY_STATECAPTURE2');
-        $capture_state3 = Configuration::get('_QUICKPAY_STATECAPTURE3');
+        $capture_states = explode(',', Configuration::get('_QUICKPAY_STATECAPTURE'));
         $cancelled = $new_state->id == _PS_OS_CANCELED_;
-        if ($capture_state == $new_state->id || $capture_state2 == $new_state->id || $capture_state3 == $new_state->id || $cancelled) {
+        if (in_array($new_state->id, $capture_states) || $cancelled) {
             $trans = Db::getInstance()->getRow(
                 'SELECT *
                 FROM '._DB_PREFIX_.'quickpay_execution
