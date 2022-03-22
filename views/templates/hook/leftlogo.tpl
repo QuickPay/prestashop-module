@@ -2,7 +2,7 @@
 * NOTICE OF LICENSE
 * $Date: 2018/09/15 05:10:42 $
 * Written by Kjeld Borch Egevang
-* E-mail: helpdesk@quickpay.net
+* E-mail: support@quickpay.net
 *}
 
 <center class="quickpay imgf">
