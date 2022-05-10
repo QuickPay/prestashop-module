@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.8';
+        $this->version = '4.1.9';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
         $this->v17 = _PS_VERSION_ >= '1.7.0.0';
@@ -1057,6 +1057,7 @@ class QuickPay extends PaymentModule
     {
         $ordering_list = array();
         $hide_images_list = $this->imagesSetup();
+        $browser = Tools::getUserBrowser();
         foreach ($setup_vars as $setup_var) {
             $vars = $this->varsObj($setup_var);
             $var_name = $vars->var_name;
@@ -1065,6 +1066,16 @@ class QuickPay extends PaymentModule
                 continue;
             }
             if ($setup->autoget && in_array($var_name, $setup->auto_ignore)) {
+                continue;
+            }
+            if ($field == 'googlepay' &&
+                empty($this->qpPreview) &&
+                $browser != 'Google Chrome') {
+                continue;
+            }
+            if ($field == 'applepay' &&
+                empty($this->qpPreview) &&
+                $browser != 'Apple Safari') {
                 continue;
             }
             if (!in_array($var_name, $ordering_list) && empty($hide_images_list[$var_name])) {
@@ -1302,7 +1313,7 @@ class QuickPay extends PaymentModule
 
         $language = new Language($this->context->language->id);
         $cart_total = $this->toQpAmount($cart->getOrderTotal(), $currency);
-        if (isset($cart->qpPreview)) {
+        if (isset($this->qpPreview)) {
             $cart_total = 10000;
         }
         $continueurl = $this->getModuleLink(
@@ -1328,6 +1339,7 @@ class QuickPay extends PaymentModule
 
         $order_id = $setup->orderprefix.(int)$cart->id;
         $done = false;
+        $browser = Tools::getUserBrowser();
         $setup_vars = $this->sortSetup();
         foreach ($setup_vars as $setup_var) {
             $id_option = $setup_var[1];
@@ -1357,29 +1369,39 @@ class QuickPay extends PaymentModule
                     $card_type_lock = '';
             }
             if ($vars->var_name == 'mobilepay' &&
-                empty($cart->qpPreview) &&
+                empty($this->qpPreview) &&
                 $invoice_country_code != 'DNK' &&
                 $invoice_country_code != 'GRL' &&
                 $invoice_country_code != 'FIN') {
                 continue;
             }
             if ($vars->var_name == 'swish' &&
-                empty($cart->qpPreview) &&
+                empty($this->qpPreview) &&
                 $invoice_country_code != 'SWE') {
                 continue;
             }
             if ($vars->var_name == 'vipps' &&
-                empty($cart->qpPreview) &&
+                empty($this->qpPreview) &&
                 $invoice_country_code != 'NOR') {
                 continue;
             }
             if ($vars->var_name == 'anydaysplit' &&
-                empty($cart->qpPreview) &&
+                empty($this->qpPreview) &&
                 $invoice_country_code != 'DNK') {
                 continue;
             }
+            if ($vars->var_name == 'googlepay' &&
+                empty($this->qpPreview) &&
+                $browser != 'Google Chrome') {
+                continue;
+            }
+            if ($vars->var_name == 'applepay' &&
+                empty($this->qpPreview) &&
+                $browser != 'Apple Safari') {
+                continue;
+            }
             if ($vars->var_name == 'viabill') {
-                if (empty($cart->qpPreview) &&
+                if (empty($this->qpPreview) &&
                     $invoice_country_code != 'DNK') {
                     continue;
                 }
@@ -1482,7 +1504,7 @@ class QuickPay extends PaymentModule
                 'module_dir'  => $this->_path
             );
             $smarty->assign($fields);
-            if ($this->v17 && empty($cart->qpPreview)) {
+            if ($this->v17 && empty($this->qpPreview)) {
                 $parms = array('option' => $id_option, 'order_id' => $order_id);
                 $tpl = 'module:quickpay/views/templates/hook/payment17.tpl';
                 $newOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
@@ -1504,8 +1526,8 @@ class QuickPay extends PaymentModule
         $paymentOptions = array();
         $cart = new Cart();
         $cart->id_currency = Configuration::get('PS_CURRENCY_DEFAULT');
-        $cart->qpPreview = true;
         $params['cart'] = $cart;
+        $this->qpPreview = true;
         $innerHtml = $this->makePayment($params, $paymentOptions);
         $innerHtml = str_replace('</a>', '', $innerHtml);
         $innerHtml = preg_replace('/<a [^>]*>/', '', $innerHtml);

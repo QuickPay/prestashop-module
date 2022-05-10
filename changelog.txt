@@ -211,3 +211,7 @@ Version 4.1.7
 Support for multiple order states for capture
 Version 4.1.8
 Added Google Pay
+Version 4.1.9
+Browser dependent payment methods
+Google Pay only shown for Chrome
+Apple Pay only shown for Safari
