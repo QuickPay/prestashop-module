@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.9';
+        $this->version = '4.1.10';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
         $this->v17 = _PS_VERSION_ >= '1.7.0.0';
@@ -2235,6 +2235,19 @@ class QuickPay extends PaymentModule
                     'basket[][item_no]' => 0,
                     'basket[][item_name]' => $this->l('Discount', $this->name),
                     'basket[][item_price]' => -$this->toQpAmount($total_discounts, $currency),
+                    'basket[][vat_rate]' => $product['rate'] / 100
+                );
+                foreach ($info as $k => $v) {
+                    $fields[] = $k.'='.urlencode($v);
+                }
+            }
+            $total_wrapping = $cart->getOrderTotal(true, Cart::ONLY_WRAPPING);
+            if ($total_wrapping > 0) {
+                $info = array(
+                    'basket[][qty]' => 1,
+                    'basket[][item_no]' => 0,
+                    'basket[][item_name]' => $this->l('Wrapping', $this->name),
+                    'basket[][item_price]' => $this->toQpAmount($total_wrapping, $currency),
                     'basket[][vat_rate]' => $product['rate'] / 100
                 );
                 foreach ($info as $k => $v) {

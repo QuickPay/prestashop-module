@@ -116,6 +116,7 @@ $_MODULE['<{quickpay}prestashop>quickpay_0c0f8b915ac47528138405fc77cd1044'] = 'E
 $_MODULE['<{quickpay}prestashop>quickpay_3ad96d2344ac1e47f513c7acffe283e8'] = '%s-manager';
 $_MODULE['<{quickpay}prestashop>quickpay_506f8b37db855f48e008835bc0233d39'] = '%1$s transaktions-ID: %2$s';
 $_MODULE['<{quickpay}prestashop>quickpay_104d9898c04874d0fbac36e125fa1369'] = 'Rabat';
+$_MODULE['<{quickpay}prestashop>quickpay_ba794350deb07c0c96fe73bd12239059'] = 'Indpakning';
 $_MODULE['<{quickpay}prestashop>quickpay_7108537956afa2a526f96cc9da7b0c36'] = 'levering';
 $_MODULE['<{quickpay}prestashop>quickpay_d64daa53b3280783789509a83991e18a'] = 'Kortgebyr';
 $_MODULE['<{quickpay}prestashop>quickpay_2cbfac302a3fa3bb5bcbb943aea85b5e'] = 'kortgebyr';
