@@ -36,7 +36,7 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
             $setup = $quickpay->getSetup();
             $json = $quickpay->doCurl('payments/'.$trans['trans_id']);
             $vars = $quickpay->jsonDecode($json);
-            $json = Tools::jsonEncode($vars);
+            $json = json_encode($vars);
             if ($vars->accepted == 1) {
                 $checksum = $quickpay->sign($json, $setup->private_key);
                 $header = array('Quickpay-checksum-sha256: '.$checksum);

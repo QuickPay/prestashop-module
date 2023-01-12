@@ -19,7 +19,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.10';
+        $this->version = '4.1.12';
         $this->v15 = _PS_VERSION_ >= '1.5.0.0';
         $this->v16 = _PS_VERSION_ >= '1.6.0.0';
         $this->v17 = _PS_VERSION_ >= '1.7.0.0';
@@ -210,7 +210,7 @@ class QuickPay extends PaymentModule
             array('_QUICKPAY_BITCOIN', 'bitcoin',
                 $this->l('Bitcoin'), 0, 'bitcoin'),
             array('_QUICKPAY_VIPPS', 'vipps',
-                $this->l('Vipps'), 0, 'vipps'),
+                $this->l('Vipps'), 0, 'vipps,vippspsp'),
             array('_QUICKPAY_RESURS', 'resurs',
                 $this->l('Resurs Bank'), 0, 'resurs'),
             array('_QUICKPAY_ANYDAYSPLIT', 'anydaysplit',
@@ -530,10 +530,10 @@ class QuickPay extends PaymentModule
             '&module_name='.$this->name;
         $helper->token = Tools::getAdminTokenLite('AdminModules');
         $helper->tpl_vars = array(
-                'fields_value' => $this->getConfigFormValues(),
-                'languages' => $this->context->controller->getLanguages(),
-                'id_language' => $this->context->language->id,
-                );
+            'fields_value' => $this->getConfigFormValues(),
+            'languages' => $this->context->controller->getLanguages(),
+            'id_language' => $this->context->language->id,
+        );
 
         $out = $helper->generateForm(array($this->getConfigSettings()));
         if (!$this->v16) {
@@ -930,7 +930,7 @@ class QuickPay extends PaymentModule
 
     public function jsonDecode($data)
     {
-        return Tools::jsonDecode($data);
+        return json_decode($data);
     }
 
     public function getCurlHandle($resource, $fields = null, $method = null, $callback_url = null)
@@ -1057,7 +1057,11 @@ class QuickPay extends PaymentModule
     {
         $ordering_list = array();
         $hide_images_list = $this->imagesSetup();
-        $browser = Tools::getUserBrowser();
+        if ($this->v16) {
+            $browser = Tools::getUserBrowser();
+        } else {
+            $browser = '';
+        }
         foreach ($setup_vars as $setup_var) {
             $vars = $this->varsObj($setup_var);
             $var_name = $vars->var_name;
@@ -1339,7 +1343,11 @@ class QuickPay extends PaymentModule
 
         $order_id = $setup->orderprefix.(int)$cart->id;
         $done = false;
-        $browser = Tools::getUserBrowser();
+        if ($this->v16) {
+            $browser = Tools::getUserBrowser();
+        } else {
+            $browser = '';
+        }
         $setup_vars = $this->sortSetup();
         foreach ($setup_vars as $setup_var) {
             $id_option = $setup_var[1];
@@ -2389,7 +2397,7 @@ class QuickPay extends PaymentModule
             if (!$customer->getByEmail($email)) {
                 // New customer
                 $customer->email = $email;
-                $name = explode(' ', $vars->invoice_address->name);
+                $name = explode(' ', trim($vars->invoice_address->name));
                 $customer->lastname = array_pop($name);
                 $customer->firstname = implode(' ', $name);
                 $customer->passwd = Tools::encrypt(Tools::passwdGen(MIN_PASSWD_LENGTH, 'RANDOM'));

@@ -215,3 +215,12 @@ Version 4.1.9
 Browser dependent payment methods
 Google Pay only shown for Chrome
 Apple Pay only shown for Safari
+Version 4.1.10
+Add support for Unzer Invoice
+Handle wrapping cost
+Version 4.1.11
+Remove Unzer Invoice
+Add vippspsp as payment method
+Version 4.1.12
+Support PrestaShop 8.0.0
+Trim spaces from name in MobilePay checkout
