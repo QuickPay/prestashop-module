@@ -12,23 +12,42 @@
 
 class QuickPay extends PaymentModule
 {
-    protected $config_form = false;
     private $post_errors = array();
+    private $v15 = _PS_VERSION_ >= '1.5.0.0';
+    private $v16 = _PS_VERSION_ >= '1.6.0.0';
+    private $v17 = _PS_VERSION_ >= '1.7.0.0';
+    private $v177 = _PS_VERSION_ >= '1.7.7.0';
+    private $hooks;
+    private $secure_key;
+    private $submitName;
+    private $setup_vars;
+    private $setup;
+    private $qpPreview;
 
     public function __construct()
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.12';
-        $this->v15 = _PS_VERSION_ >= '1.5.0.0';
-        $this->v16 = _PS_VERSION_ >= '1.6.0.0';
-        $this->v17 = _PS_VERSION_ >= '1.7.0.0';
-        $this->v177 = _PS_VERSION_ >= '1.7.7.0';
+        $this->version = '4.1.14';
         $this->author = 'Kjeld Borch Egevang';
         $this->module_key = 'b99f59b30267e81da96b12a8d1aa5bac';
         $this->need_instance = 0;
         $this->secure_key = Tools::encrypt($this->name);
         $this->bootstrap = true;
+        $this->hooks = array(
+            'displayPayment' => true,
+            'displayHeader' => true,
+            'displayLeftColumn' => true,
+            'displayFooter' => true,
+            'displayAdminOrder' => !$this->v177,
+            'displayAdminOrderSide' => $this->v177,
+            'displayPaymentReturn' => true,
+            'displayPDFInvoice' => true,
+            'actionOrderStatusPostUpdate' => true,
+            'paymentOptions' => $this->v17,
+            'displayExpressCheckout' => $this->v17,
+            'displayShoppingCart' => !$this->v17
+        );
 
         parent::__construct();
 
@@ -73,18 +92,7 @@ class QuickPay extends PaymentModule
                 return false;
             }
         }
-        return $this->registerHook('payment') &&
-            $this->registerHook('header') &&
-            $this->registerHook('leftColumn') &&
-            $this->registerHook('footer') &&
-            ($this->v177 || $this->registerHook('displayAdminOrder')) &&
-            (!$this->v177 || $this->registerHook('displayAdminOrderSide')) &&
-            $this->registerHook('paymentReturn') &&
-            $this->registerHook('PDFInvoice') &&
-            $this->registerHook('postUpdateOrderStatus') &&
-            (!$this->v17 || $this->registerHook('paymentOptions')) &&
-            (!$this->v17 || $this->registerHook('displayExpressCheckout')) &&
-            ($this->v17 || $this->registerHook('shoppingCartExtra'));
+        return $this->registerHooks();
     }
 
     public function uninstall()
@@ -104,6 +112,18 @@ class QuickPay extends PaymentModule
         return Configuration::deleteByName('_QUICKPAY_OVERLAY_CODE') &&
             Configuration::deleteByName('_QUICKPAY_ORDERING') &&
             Configuration::deleteByName('_QUICKPAY_HIDE_IMAGES');
+    }
+
+    public function registerHooks()
+    {
+        foreach ($this->hooks as $name => $condition) {
+            if ($condition && !$this->isRegisteredInHook($name)) {
+                if (!$this->registerHook($name)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public function getConf($name)
@@ -445,15 +465,6 @@ class QuickPay extends PaymentModule
         }
 
         $this->context->controller->addCSS($this->_path.'/views/css/front.css');
-        if (isset($this->back_file) && !file_exists($this->back_file)) {
-            $err = $this->l('This module requires the backward compatibility module.');
-            if (!Module::isInstalled('backwardcompatibility')) {
-                $err .= ' '.$this->l('You can get the compatibility module for free from').
-                    ' <a href="http://addons.prestashop.com">http://addons.prestashop.com</a>';
-            }
-            $err .= '<br /><br />'.$this->l('You must configure the compatibilty module.');
-            return $this->displayError($err);
-        }
 
         $output = '';
         $row = Db::getInstance()->ExecuteS(
@@ -465,21 +476,7 @@ class QuickPay extends PaymentModule
         }
         $this->getSetup();
         $this->postProcess();
-        if ($this->isRegisteredInHook(Hook::getIdByName('paymentTop'))) {
-            $this->unRegisterHook('paymentTop');
-        }
-        if (!$this->isRegisteredInHook(Hook::getIdByName('header'))) {
-            $this->registerHook('header');
-        }
-        if ($this->v17 && !$this->isRegisteredInHook(Hook::getIdByName('displayExpressCheckout'))) {
-            $this->registerHook('displayExpressCheckout');
-        }
-        if (!$this->v17 && !$this->isRegisteredInHook(Hook::getIdByName('shoppingCartExtra'))) {
-            $this->registerHook('shoppingCartExtra');
-        }
-        if ($this->v177 && !$this->isRegisteredInHook(Hook::getIdByName('displayAdminOrderSide'))) {
-            $this->registerHook('displayAdminOrderSide');
-        }
+        $this->registerHooks();
         $this->context->controller->addJqueryUI('ui.sortable');
         $output .= $this->displayErrors();
         if (Tools::getValue($this->submitName) && !$this->post_errors) {
@@ -1257,7 +1254,7 @@ class QuickPay extends PaymentModule
         return $amount;
     }
 
-    public function hookHeader()
+    public function hookDisplayHeader()
     {
         if ($this->v16) {
             $this->context->controller->addCSS($this->_path.'/views/css/front.css');
@@ -1272,7 +1269,7 @@ class QuickPay extends PaymentModule
 
     public function hookPaymentTop()
     {
-        $this->hookHeader();
+        $this->hookDisplayHeader();
     }
 
 
@@ -1543,7 +1540,7 @@ class QuickPay extends PaymentModule
         $this->context->smarty->assign('title', $this->l('Payment preview'));
         $outerHtml = $this->display(__FILE__, 'views/templates/hook/preview.tpl');
         $html = str_replace('_HTML_', $innerHtml, $outerHtml);
-        $innerHtml = $this->hookLeftColumn();
+        $innerHtml = $this->hookDisplayLeftColumn();
         $innerHtml = str_replace('<center>', '', $innerHtml);
         $innerHtml = str_replace('</center>', '', $innerHtml);
         $this->context->smarty->assign('title', $this->l('Card logo preview'));
@@ -1553,7 +1550,7 @@ class QuickPay extends PaymentModule
     }
 
 
-    public function hookPayment($params)
+    public function hookDisplayPayment($params)
     {
         $paymentOptions = array();
         return $this->makePayment($params, $paymentOptions);
@@ -1568,7 +1565,7 @@ class QuickPay extends PaymentModule
     }
 
 
-    public function hookLeftColumn()
+    public function hookDisplayLeftColumn()
     {
         $smarty = $this->context->smarty;
 
@@ -1594,10 +1591,10 @@ class QuickPay extends PaymentModule
 
     public function hookRightColumn()
     {
-        return $this->hookLeftColumn();
+        return $this->hookDisplayLeftColumn();
     }
 
-    public function hookFooter()
+    public function hookDisplayFooter()
     {
         $smarty = $this->context->smarty;
 
@@ -1642,7 +1639,7 @@ class QuickPay extends PaymentModule
         return $brand;
     }
 
-    public function hookPaymentReturn($params)
+    public function hookDisplayPaymentReturn($params)
     {
         if (!$this->active) {
             return;
@@ -2019,7 +2016,7 @@ class QuickPay extends PaymentModule
         }
     }
 
-    public function hookPDFInvoice($params)
+    public function hookDisplayPDFInvoice($params)
     {
         $object = $params['object'];
         $order = new Order((int)$object->id_order);
@@ -2052,7 +2049,7 @@ class QuickPay extends PaymentModule
         }
     }
 
-    public function hookPostUpdateOrderStatus($params)
+    public function hookActionOrderStatusPostUpdate($params)
     {
         $this->getSetup();
         $new_state = $params['newOrderStatus'];
@@ -2118,7 +2115,7 @@ class QuickPay extends PaymentModule
         return $this->display(__FILE__, 'mobilepay.tpl');
     }
 
-    public function hookShoppingCartExtra($params)
+    public function hookDisplayShoppingCart($params)
     {
         if ($this->v17) {
             return '';
@@ -2556,6 +2553,12 @@ class QuickPay extends PaymentModule
                     $this->addLog($msg, 3, 0, 'Cart', $id_cart);
                 }
                 die('Callback type is capture');
+            }
+            if ($operation->type != 'authorize') {
+                die('Callback type is '.$operation->type);
+            }
+            if ($operation->qp_status_code != '20000') {
+                die('Callback status is '.$operation->qp_status_code);
             }
         }
         if ($cart->OrderExists() != 0) {

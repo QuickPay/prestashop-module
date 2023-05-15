@@ -224,3 +224,9 @@ Add vippspsp as payment method
 Version 4.1.12
 Support PrestaShop 8.0.0
 Trim spaces from name in MobilePay checkout
+Version 4.1.13
+Update logo for Anyday
+Fix deprecated hooks
+Fix for PHP 8.2
+Version 4.1.14
+Check type and status in validate function
