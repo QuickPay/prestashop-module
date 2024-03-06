@@ -28,7 +28,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.14';
+        $this->version = '4.1.15';
         $this->author = 'Kjeld Borch Egevang';
         $this->module_key = 'b99f59b30267e81da96b12a8d1aa5bac';
         $this->need_instance = 0;
@@ -44,9 +44,7 @@ class QuickPay extends PaymentModule
             'displayPaymentReturn' => true,
             'displayPDFInvoice' => true,
             'actionOrderStatusPostUpdate' => true,
-            'paymentOptions' => $this->v17,
-            'displayExpressCheckout' => $this->v17,
-            'displayShoppingCart' => !$this->v17
+            'paymentOptions' => $this->v17
         );
 
         parent::__construct();
@@ -159,10 +157,10 @@ class QuickPay extends PaymentModule
                 $this->l('Creditcards combined window'), 0, ''),
             array('_QUICKPAY_AUTOGET', 'autoget',
                 sprintf($this->l('Cards in payment window controlled by %s'), 'QuickPay'), 0, ''),
-            array('_QUICKPAY_MOBILEPAY_CHECKOUT', 'mobilepaycheckout',
-                $this->l('Add button for MobilePay Checkout'), 0, ''),
             array('_QUICKPAY_AUTOFEE', 'autofee',
                 $this->l('Customer pays the card fee'), 0, ''),
+            array('_QUICKPAY_SHOWFEE', 'showfee',
+                $this->l('Show customer card fee'), 0, ''),
             array('_QUICKPAY_API', 'api',
                 $this->l('Activate API'), 1, ''),
             array('_QUICKPAY_SHOWCARDS', 'showcards',
@@ -325,9 +323,6 @@ class QuickPay extends PaymentModule
                     }
                 }
             }
-        }
-        if ($this->setup->mobilepaycheckout) {
-            $this->setup->mobilepay = 1;
         }
         // $this->dump($this->setup->card_type_locks);
         return $this->setup;
@@ -1261,10 +1256,6 @@ class QuickPay extends PaymentModule
         } else {
             $this->context->controller->addCSS($this->_path.'/views/css/front15.css');
         }
-        if ($this->getConf('_QUICKPAY_MOBILEPAY_CHECKOUT')) {
-            $this->context->controller->addJqueryUI('ui.dialog');
-            $this->context->controller->addJS($this->_path.'views/js/mobilepay.js');
-        }
     }
 
     public function hookPaymentTop()
@@ -1424,14 +1415,16 @@ class QuickPay extends PaymentModule
             $fee_texts = array();
             if ($card_list) {
                 foreach ($card_list as $card_name) {
-                    if ($autofee && ($card_name == 'mobilepay' || $card_name == 'swish')) {
+                    if ($autofee && $setup->showfee &&
+                        ($card_name == 'mobilepay' || $card_name == 'swish')
+                    ) {
                         $fee_text = array();
                         $fee_text['name'] = $this->l('Fee will be included in the payment window').
                             $fee_text['amount'] = '';
                         $fee_texts[] = $fee_text;
                         continue;
                     }
-                    if (!empty($fees[$card_name])) {
+                    if (!empty($fees[$card_name]) && $setup->showfee) {
                         $fee_text = array();
                         if ($card_name == 'viabill') {
                             $fee_text['name'] = $this->l('Fee for').
@@ -2084,43 +2077,9 @@ class QuickPay extends PaymentModule
         }
     }
 
-    public function hookDisplayExpressCheckout($params)
-    {
-        if (!$this->getConf('_QUICKPAY_MOBILEPAY_CHECKOUT')) {
-            return '';
-        }
-        $cart = $params['cart'];
-        $invoice_address = new Address((int)$cart->id_address_invoice);
-        $country = new Country($invoice_address->id_country);
-        if ($country->iso_code && !in_array($country->iso_code, array('DK', 'FI', 'GL'))) {
-            return '';
-        }
-        $prefix = $this->getConf('_QUICKPAY_ORDER_PREFIX');
-        $order_id = $prefix.(int)$cart->id;
-        $parms = array(
-            'option' => 'mobilepay',
-            'order_id' => $order_id,
-            'mobilepay_checkout' => 1
-        );
-        $payment_url = $this->getModuleLink('payment', $parms);
-        $mobilepay_url = $this->getModuleLink('mobilepay');
-        $id_cms = (int)$this->getConf('_QUICKPAY_CMS_ID');
-        $this->context->smarty->assign(
-            array(
-                'payment_url' => $payment_url,
-                'mobilepay_url' => $mobilepay_url,
-                'id_cms' => $id_cms
-            )
-        );
-        return $this->display(__FILE__, 'mobilepay.tpl');
-    }
-
     public function hookDisplayShoppingCart($params)
     {
-        if ($this->v17) {
-            return '';
-        }
-        return $this->hookDisplayExpressCheckout($params);
+        return '';
     }
 
     public function sign($data, $key)
@@ -2135,11 +2094,13 @@ class QuickPay extends PaymentModule
 
     public function payment()
     {
+        if (file_exists($this->local_path.'/customer_function.php')) {
+            include_once($this->local_path.'/customer_function.php');
+        }
         $setup = $this->getSetup();
         $fields = array();
         $id_option = Tools::getValue('option');
         $order_id = Tools::getValue('order_id');
-        $mobilepay_checkout = Tools::getValue('mobilepay_checkout');
         $id_cart = (int)Tools::substr($order_id, 3);
         $cart = new Cart($id_cart);
         if ($id_option) {
@@ -2178,17 +2139,10 @@ class QuickPay extends PaymentModule
             'variables[module_version]' => $this->version,
             'shopsystem[name]' => 'PrestaShop',
             'shopsystem[version]' => $this->version,
-            'customer_email' => $customer->email,
             'google_analytics_client_id' => $setup->ga_client_id,
             'google_analytics_tracking_id' => $setup->ga_tracking_id
         );
-        if ($mobilepay_checkout) {
-            $info += array(
-                'invoice_address_selection' => true,
-                'shipping_address_selection' => true
-            );
-        }
-        if ($invoice_address->id) {
+        if ($invoice_address->id && !defined('QP_GDPR_SAFE')) {
             $info += array(
                 'invoice_address[name]' => $invoice_address->firstname.' '.$invoice_address->lastname,
                 'invoice_address[street]' => $invoice_street,
@@ -2213,7 +2167,7 @@ class QuickPay extends PaymentModule
         foreach ($info as $k => $v) {
             $fields[] = $k.'='.urlencode($v);
         }
-        if (!in_array('payment_methods=paypal', $fields)) {
+        if (!in_array('payment_methods=paypal', $fields) && !defined('QP_GDPR_SAFE')) {
             $info = array(
                 'shipping[amount]' => $this->toQpAmount($cart->getTotalShippingCost(), $currency),
                 'shipping[vat_rate]' => $carrier->getTaxesRate($delivery_address) / 100,
@@ -2344,43 +2298,6 @@ class QuickPay extends PaymentModule
             die($vars->message);
         }
         Tools::redirect($vars->url, '');
-    }
-
-    public function mobilePay()
-    {
-        $cart = $this->context->cart;
-        $delivery_option = $cart->getDeliveryOption();
-        $carrier = new Carrier((int)reset($delivery_option));
-        $id_lang = (int)$cart->id_lang;
-        $prefix = $this->getConf('_QUICKPAY_ORDER_PREFIX');
-        $order_id = $prefix.(int)$cart->id;
-        $id_cms = (int)$this->getConf('_QUICKPAY_CMS_ID');
-        $links = CMS::getLinks(
-            Context::getContext()->language->id,
-            array($id_cms)
-        );
-        $link = reset($links);
-        if (isset($link['link'])) {
-            $mobilepay_link = $link['link'];
-        } else {
-            $mobilepay_link = '';
-        }
-        $parms = array(
-            'option' => 'mobilepay',
-            'order_id' => $order_id,
-            'mobilepay_checkout' => 1
-        );
-        $payment_url = $this->getModuleLink('payment', $parms);
-        $this->context->smarty->assign(
-            array(
-                'payment_url' => $payment_url,
-                'mobilepay_link' => $mobilepay_link,
-                'carrier_name' => $carrier->name,
-                'carrier_delay' => $carrier->delay[$id_lang]
-            )
-        );
-        print $this->display(__FILE__, 'mobilepay.tpl');
-        exit;
     }
 
     public function addCustomer($vars, &$cart)
