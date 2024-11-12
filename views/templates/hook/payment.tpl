@@ -17,7 +17,7 @@
 {/if}
 	<a style="height:auto" href="javascript:$('#quickpay{$type|escape:'htmlall':'UTF-8'}').submit()">
 {foreach from=$imgs item=img}
-            <img src="{$module_dir|escape:'htmlall':'UTF-8'}views/img/{$img|escape:'htmlall':'UTF-8'}.png" alt="{l s='Pay with credit cards ' mod='quickpay'}" />
+            <img src="{$module_dir|escape:'htmlall':'UTF-8'}views/img/{$img|escape:'htmlall':'UTF-8'}.png" alt="{l s='Pay with cards ' mod='quickpay'}" />
 {/foreach}
 		&nbsp;
 		{$text|escape:'htmlall':'UTF-8'}

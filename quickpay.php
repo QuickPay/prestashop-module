@@ -23,12 +23,15 @@ class QuickPay extends PaymentModule
     private $setup_vars;
     private $setup;
     private $qpPreview;
+    private $qp_error;
+    private $orderShopId;
+    private $curl_error;
 
     public function __construct()
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.1.15';
+        $this->version = '4.2.2';
         $this->author = 'Kjeld Borch Egevang';
         $this->module_key = 'b99f59b30267e81da96b12a8d1aa5bac';
         $this->need_instance = 0;
@@ -154,7 +157,7 @@ class QuickPay extends PaymentModule
             array('_QUICKPAY_TESTMODE', 'testmode',
                 $this->l('Accept test payments'), 0, ''),
             array('_QUICKPAY_COMBINE', 'combine',
-                $this->l('Creditcards combined window'), 0, ''),
+                $this->l('Cards combined window'), 0, ''),
             array('_QUICKPAY_AUTOGET', 'autoget',
                 sprintf($this->l('Cards in payment window controlled by %s'), 'QuickPay'), 0, ''),
             array('_QUICKPAY_AUTOFEE', 'autofee',
@@ -175,8 +178,6 @@ class QuickPay extends PaymentModule
                 $this->l('Branding in payment window'), 0, ''),
             array('_QUICKPAY_FEE_TAX', 'feetax',
                 $this->l('Tax for card fee'), 0, ''),
-            array('_QUICKPAY_CMS_ID', 'cmsid',
-                $this->l('Info page for MobilePay Checkout'), 0, ''),
             array('_QUICKPAY_VIABILL', 'viabill',
                 $this->l('ViaBill - buy now, pay whenever you want'), 0, 'viabill'),
             array('_QUICKPAY_DK', 'dk',
@@ -203,36 +204,22 @@ class QuickPay extends PaymentModule
                 $this->l('Diners Club'), 0, 'diners,diners-dk'),
             array('_QUICKPAY_JCB', 'jcb',
                 $this->l('JCB'), 0, 'jcb'),
-            array('_QUICKPAY_DK_3D', 'dk_3d',
-                $this->l('Dankort (3D)'), 0, '3d-dankort'),
-            array('_QUICKPAY_VISA_3D', 'visa_3d',
-                $this->l('Visa card (3D)'), 0, '3d-visa,3d-visa-dk'),
-            array('_QUICKPAY_VELECTRON_3D', 'visaelectron_3d',
-                $this->l('Visa Electron (3D)'), 0, '3d-visa-electron,3d-visa-electron-dk'),
-            array('_QUICKPAY_MASTERCARD_3D', 'mastercard_3d',
-                $this->l('MasterCard (3D)'), 0, '3d-mastercard,3d-mastercard-dk'),
-            array('_QUICKPAY_MASTERCARDDEBET_3D', 'mastercarddebet_3d',
-                $this->l('MasterCard Debet (3D)'), 0, '3d-mastercard-debet,3d-mastercard-debet-dk'),
-            array('_QUICKPAY_MAESTRO_3D', 'maestro_3d',
-                $this->l('Maestro (3D)'), 0, '3d-maestro,3d-maestro-dk'),
-            array('_QUICKPAY_JCB_3D', 'jcb_3d',
-                $this->l('JCB (3D)'), 0, '3d-jcb'),
             array('_QUICKPAY_PAYPAL', 'paypal',
                 $this->l('PayPal'), 0, 'paypal'),
-            array('_QUICKPAY_SOFORT', 'sofort',
-                $this->l('Sofort'), 0, 'sofort'),
             array('_QUICKPAY_APPLEPAY', 'applepay',
                 $this->l('Apple Pay'), 0, 'apple-pay'),
             array('_QUICKPAY_GOOGLE_PAY', 'googlepay',
                 $this->l('Google Pay'), 0, 'google-pay'),
-            array('_QUICKPAY_BITCOIN', 'bitcoin',
-                $this->l('Bitcoin'), 0, 'bitcoin'),
             array('_QUICKPAY_VIPPS', 'vipps',
                 $this->l('Vipps'), 0, 'vipps,vippspsp'),
             array('_QUICKPAY_RESURS', 'resurs',
                 $this->l('Resurs Bank'), 0, 'resurs'),
             array('_QUICKPAY_ANYDAYSPLIT', 'anydaysplit',
-                $this->l('ANYDAY Split'), 0, 'anyday-split')
+                $this->l('ANYDAY Split'), 0, 'anyday-split'),
+            array('_QUICKPAY_TRUSTLY', 'trustly',
+                $this->l('Trustly'), 0, 'trustly'),
+            array('_QUICKPAY_IDEAL', 'ideal',
+                $this->l('Ideal'), 0, 'ideal'),
         );
         $this->setup = new StdClass();
         $this->setup->lock_names = array();
@@ -587,8 +574,7 @@ class QuickPay extends PaymentModule
             $vars->var_name != 'orderprefix' &&
             $vars->var_name != 'statecapture' &&
             $vars->var_name != 'branding' &&
-            $vars->var_name != 'feetax' &&
-            $vars->var_name != 'cmsid';
+            $vars->var_name != 'feetax';
     }
 
     protected function getConfigInput15($vars)
@@ -744,30 +730,6 @@ class QuickPay extends PaymentModule
         return $input;
     }
 
-    protected function getCmsIdInput($vars)
-    {
-        $query = array();
-        $query[] = array('id' => 0,  'name' => $this->l('None'));
-        $cmsPages = CMS::getCMSPages($this->context->language->id);
-        foreach ($cmsPages as $cmsPage) {
-            $query[] = array(
-                'id' => $cmsPage['id_cms'],
-                'name' => $cmsPage['meta_title']
-            );
-        }
-        $input = array(
-            'type' => 'select',
-            'name' => $vars->glob_name,
-            'label' => $vars->card_text,
-            'options' => array(
-                'query' =>  $query,
-                'id' => 'id',
-                'name' => 'name'
-            )
-        );
-        return $input;
-    }
-
     protected function getConfigSettings()
     {
         $inputs = array();
@@ -786,10 +748,6 @@ class QuickPay extends PaymentModule
             }
             if ($vars->var_name == 'feetax') {
                 $inputs[] = $this->getFeeTaxInput($vars);
-                continue;
-            }
-            if ($vars->var_name == 'cmsid') {
-                $inputs[] = $this->getCmsIdInput($vars);
                 continue;
             }
             $inputs[] = $this->getConfigInput($vars);
@@ -1266,12 +1224,8 @@ class QuickPay extends PaymentModule
 
     public function makePayment($params, &$paymentOptions, $select_option = 0)
     {
-        if (function_exists('stream_resolve_include_path') &&
-            stream_resolve_include_path(
-                _PS_MODULE_DIR_.'quickpay/quickpay.inc.php'
-            )
-        ) {
-            include(_PS_MODULE_DIR_.'quickpay/quickpay.inc.php');
+        if (file_exists(dirname(__FILE__).'/quickpay.inc.php')) {
+            include(dirname(__FILE__).'/quickpay.inc.php');
         }
         $setup = $this->getSetup();
         $hide_images_list = $this->imagesSetup();
@@ -1356,7 +1310,7 @@ class QuickPay extends PaymentModule
                 if ($done) {
                     continue;
                 }
-                $card_text = $this->l('credit card');
+                $card_text = $this->l('card');
                 $card_list = array_keys($setup->credit_cards);
                 $card_type_lock = implode(',', $setup->card_type_locks);
                 $done = true;
@@ -2020,7 +1974,6 @@ class QuickPay extends PaymentModule
             ORDER BY `exec_id` ASC'
         );
         if (isset($trans['trans_id'])) {
-            // $brand = $this->metadata->brand;
             $vars = $this->jsonDecode($trans['json']);
             $html = '<table><tr>';
             $html .= '<td style="width:100%; text-align:right">'.
@@ -2603,9 +2556,9 @@ class QuickPay extends PaymentModule
     {
         $id_lang = (int)$cart->id_lang;
         if ($this->v16) {
-            $txt = $this->l('Credit card fee', $this->name);
+            $txt = $this->l('Card fee', $this->name);
         } else {
-            $txt = $this->l('Credit card fee', $this->name, $id_lang);
+            $txt = $this->l('Card fee', $this->name, $id_lang);
         }
         $row = Db::getInstance()->getRow(
             'SELECT `id_product`
@@ -2634,9 +2587,9 @@ class QuickPay extends PaymentModule
         foreach (Language::getLanguages(false) as $lang) {
             $id_lang = $lang['id_lang'];
             if ($this->v16) {
-                $txt = $this->l('Credit card fee', $this->name);
+                $txt = $this->l('Card fee', $this->name);
             } else {
-                $txt = $this->l('Credit card fee', $this->name, $id_lang);
+                $txt = $this->l('Card fee', $this->name, $id_lang);
             }
             $product->name[$id_lang] = $txt;
             $product->link_rewrite[$id_lang] = 'fee';

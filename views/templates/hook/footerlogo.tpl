@@ -11,7 +11,7 @@
 </h4>
 <div class="block_content toggle-footer quickpay imgf">
 {foreach from=$ordering_list item=var_name}
-    <img src="{$link->getMediaLink("`$module_dir|escape:'htmlall':'UTF-8'`views/img/`$var_name|escape:'htmlall':'UTF-8'`.png")}" alt="{l s='Credit card' mod='quickpay'}" />
+    <img src="{$link->getMediaLink("`$module_dir|escape:'htmlall':'UTF-8'`views/img/`$var_name|escape:'htmlall':'UTF-8'`.png")}" alt="{l s='Card' mod='quickpay'}" />
 {/foreach}
 </div>
 </section>

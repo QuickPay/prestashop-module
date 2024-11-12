@@ -282,3 +282,12 @@ Version 4.1.15
 Add option whether to show fee
 Remove MobilePay checkout
 Add option QP_GDPR_SAFE
+
+Version 4.2.0
+Remove 3D cards, add Trustly and Ideal
+
+Version 4.2.1
+Remove selection for MobilePay Checkout
+
+Version 4.2.2
+Use "card" instead of "credit card"

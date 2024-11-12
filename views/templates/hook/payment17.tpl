@@ -11,7 +11,7 @@
 <p class="payment_module quickpay">
 {/if}
 {foreach from=$imgs item=img}
-            <img src="{$module_dir|escape:'htmlall':'UTF-8'}views/img/{$img|escape:'htmlall':'UTF-8'}.png" alt="{l s='Pay with credit cards ' mod='quickpay'}" />
+            <img src="{$module_dir|escape:'htmlall':'UTF-8'}views/img/{$img|escape:'htmlall':'UTF-8'}.png" alt="{l s='Pay with cards ' mod='quickpay'}" />
 {/foreach}
 {if $fees|@count gt 0}
 <span style="display:table">
