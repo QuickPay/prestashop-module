@@ -291,3 +291,6 @@ Remove selection for MobilePay Checkout
 
 Version 4.2.2
 Use "card" instead of "credit card"
+
+Version 4.3.0
+Fixes for PrestaShop 9
