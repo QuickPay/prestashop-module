@@ -31,11 +31,12 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.2.2';
+        $this->version = '4.3.0';
         $this->author = 'Kjeld Borch Egevang';
         $this->module_key = 'b99f59b30267e81da96b12a8d1aa5bac';
         $this->need_instance = 0;
-        $this->secure_key = Tools::encrypt($this->name);
+        $this->secure_key = $this->v17 ?
+            Tools::hash($this->name) : Tools::encrypt($this->name);
         $this->bootstrap = true;
         $this->hooks = array(
             'displayPayment' => true,
@@ -2530,7 +2531,11 @@ class QuickPay extends PaymentModule
                 $this->addLog($msg, 2, 0, 'Cart', $id_cart);
                 die('Prestashop error - got exception.');
             }
-            $id_order = Order::getOrderByCartId($cart->id);
+            if ($this->v17) {
+                $id_order = Order::getIdByCartId($cart->id);
+            } else {
+                $id_order = Order::getOrderByCartId($cart->id);
+            }
             if ($id_order) {
                 $order = new Order($id_order);
                 $fields = array(

@@ -49,7 +49,11 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
         }
         unset($this->context->cookie->id_cart);
         parent::init();
-        $id_order = Order::getOrderByCartId((int)$id_cart);
+        if (_PS_VERSION_ >= '1.7.7.0') {
+            $id_order = Order::getIdByCartId((int)$id_cart);
+        } else {
+            $id_order = Order::getOrderByCartId((int)$id_cart);
+        }
         if (!$id_order) {
             Tools::redirect('history.php');
         }
