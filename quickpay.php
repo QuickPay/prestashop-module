@@ -13,10 +13,12 @@
 class QuickPay extends PaymentModule
 {
     private $post_errors = array();
-    private $v15 = _PS_VERSION_ >= '1.5.0.0';
-    private $v16 = _PS_VERSION_ >= '1.6.0.0';
-    private $v17 = _PS_VERSION_ >= '1.7.0.0';
-    private $v177 = _PS_VERSION_ >= '1.7.7.0';
+    private $v15;
+    private $v16;
+    private $v17;
+    private $v177;
+    private $v8;
+    private $v9;
     private $hooks;
     private $secure_key;
     private $submitName;
@@ -31,10 +33,16 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.3.0';
+        $this->version = '4.3.1';
         $this->author = 'Kjeld Borch Egevang';
         $this->module_key = 'b99f59b30267e81da96b12a8d1aa5bac';
         $this->need_instance = 0;
+        $this->v15 = Tools::version_compare(_PS_VERSION_, '1.5.0', '>=');
+        $this->v16 = Tools::version_compare(_PS_VERSION_, '1.6.0', '>=');
+        $this->v17 = Tools::version_compare(_PS_VERSION_, '1.7.0', '>=');
+        $this->v177 = Tools::version_compare(_PS_VERSION_, '1.7.7', '>=');
+        $this->v8 = Tools::version_compare(_PS_VERSION_, '8.0.0', '>=');
+        $this->v9 = Tools::version_compare(_PS_VERSION_, '9.0.0', '>=');
         $this->secure_key = $this->v17 ?
             Tools::hash($this->name) : Tools::encrypt($this->name);
         $this->bootstrap = true;
@@ -379,6 +387,22 @@ class QuickPay extends PaymentModule
             true
         );
         return $url;
+    }
+
+    public function getDate($time)
+    {
+        $date = date('Y-m-d H:i:s', strtotime($time));
+        if ($this->v8) {
+            return Tools::displayDate($date, true);
+        } else {
+            return Tools::displayDate($date, null, true);
+        }
+    }
+
+    public function displayPrice($amount, $currency)
+    {
+        $locale = $this->context->getCurrentLocale();
+        return $locale->formatPrice($amount, $currency->iso_code);
     }
 
     public function addLog($message, $severity = 1, $error_code = null, $object_type = null, $object_id = null)
@@ -1184,12 +1208,12 @@ class QuickPay extends PaymentModule
     public function displayQpAmount($amount, $currency)
     {
         $amount = $this->fromQpAmount($amount, $currency);
-        return Tools::displayPrice($amount, $currency);
+        return $this->displayPrice($amount, $currency);
     }
 
     public function fromUserAmount($amount, $currency)
     {
-        $use_comma = strpos(Tools::displayPrice(1.23, $currency), ',') !== false;
+        $use_comma = strpos($this->displayPrice(1.23, $currency), ',') !== false;
         if ($use_comma) {
             $amount = str_replace('.', '', $amount);
             $amount = str_replace(',', '.', $amount);
@@ -1201,7 +1225,7 @@ class QuickPay extends PaymentModule
 
     public function toUserAmount($amount, $currency)
     {
-        $use_comma = strpos(Tools::displayPrice(1.23, $currency), ',') !== false;
+        $use_comma = strpos($this->displayPrice(1.23, $currency), ',') !== false;
         if ($use_comma) {
             $amount = str_replace('.', ',', $amount);
         }
@@ -1794,14 +1818,7 @@ class QuickPay extends PaymentModule
         $html .= '<tr><th>';
         $html .= $this->l('Created:');
         $html .= '</th><td>';
-        $html .= Tools::displayDate(
-            date(
-                'Y-m-d H:i:s',
-                strtotime($vars->created_at)
-            ),
-            null,
-            true
-        );
+        $html .= $this->getDate($vars->created_at);
         $html .= '</td></tr>';
 
         if ($vars->metadata->fraud_suspected) {
@@ -1843,14 +1860,7 @@ class QuickPay extends PaymentModule
         $qp_total = $this->toQpAmount($order->total_paid, $currency);
         foreach ($vars->operations as $operation) {
             $html .= '<tr><td>';
-            $html .= Tools::displayDate(
-                date(
-                    'Y-m-d H:i:s',
-                    strtotime($operation->created_at)
-                ),
-                null,
-                true
-            );
+            $html .= $this->getDate($operation->created_at);
             $html .= '</td><td>';
             switch ($operation->type) {
                 case 'capture':
