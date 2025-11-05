@@ -1,0 +1,8 @@
+.adminorders .alert-danger {
+    background: none;
+    border: none;
+    width: 62%;
+}
+body.adminorders .alert-danger::before {
+  display: none !important;
+}

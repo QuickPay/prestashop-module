@@ -294,3 +294,12 @@ Use "card" instead of "credit card"
 
 Version 4.3.0
 Fixes for PrestaShop 9
+
+Version 4.3.1
+More fixes for PrestaShop 9
+
+4.4.0
+Hardend module security
+Hardend input handling
+Refactored sections using deprecated php features
+Performed code quality & maintenance passes

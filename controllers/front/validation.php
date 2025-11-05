@@ -16,9 +16,14 @@ class QuickPayValidationModuleFrontController extends ModuleFrontController
     {
         $json = Tools::file_get_contents('php://input');
         if (!$json) {
-            $json = $GLOBALS['HTTP_RAW_POST_DATA']; // Deprecated since PHP 5.6
+            //$json = $GLOBALS['HTTP_RAW_POST_DATA']; // Deprecated since PHP 5.6
+            die('No data received');
         }
-        $checksum = $_SERVER['HTTP_QUICKPAY_CHECKSUM_SHA256'];
+        $checksum = isset($_SERVER['HTTP_QUICKPAY_CHECKSUM_SHA256'])? $_SERVER['HTTP_QUICKPAY_CHECKSUM_SHA256']: null;
+        if (!$checksum) { 
+            header('HTTP/1.1 400 Bad Request'); 
+            die(json_encode(['error' => 'Missing checksum header'])); 
+        } 
 
         $quickpay = new QuickPay();
         $quickpay->validate($json, $checksum, _PS_OS_PAYMENT_, true);

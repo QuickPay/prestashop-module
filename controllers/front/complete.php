@@ -24,7 +24,7 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
             /* Wait for validation */
             $trans = Db::getInstance()->getRow('SELECT *
                 FROM '._DB_PREFIX_.'quickpay_execution
-                WHERE `id_cart` = '.$id_cart.'
+                WHERE `id_cart` = '.(int)$id_cart.'
                 ORDER BY `id_cart` ASC');
             if ($trans && $trans['accepted']) {
                 break;
@@ -40,6 +40,13 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
             if ($vars->accepted == 1) {
                 $checksum = $quickpay->sign($json, $setup->private_key);
                 $header = array('Quickpay-checksum-sha256: '.$checksum);
+                $cart = new Cart((int)$id_cart);
+                if (Validate::isLoadedObject($cart) && $cart->id_customer) {
+                    $customer = new Customer($cart->id_customer);
+                    if (Validate::isLoadedObject($customer)) {
+                        $this->context->customer = $customer;
+                    }
+                }
                 if (Configuration::get('PS_SHOP_ENABLE')) {
                     $this->doCurl($vars->link->callback_url, $json, $header);
                 } else {
@@ -63,7 +70,7 @@ class QuickPayCompleteModuleFrontController extends ModuleFrontController
             $quickpay = new QuickPay();
             $trans = Db::getInstance()->getRow('SELECT *
                 FROM '._DB_PREFIX_.'quickpay_execution
-                WHERE `id_cart` = '.$id_cart.'
+                WHERE `id_cart` = '.(int)$id_cart.'
                 ORDER BY `id_cart` ASC');
             $json = $trans['json'];
             $vars = $quickpay->jsonDecode($json);

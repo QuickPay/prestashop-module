@@ -33,7 +33,7 @@ class QuickPay extends PaymentModule
     {
         $this->name = 'quickpay';
         $this->tab = 'payments_gateways';
-        $this->version = '4.3.1';
+        $this->version = '4.3.2';
         $this->author = 'Kjeld Borch Egevang';
         $this->module_key = 'b99f59b30267e81da96b12a8d1aa5bac';
         $this->need_instance = 0;
@@ -56,7 +56,8 @@ class QuickPay extends PaymentModule
             'displayPaymentReturn' => true,
             'displayPDFInvoice' => true,
             'actionOrderStatusPostUpdate' => true,
-            'paymentOptions' => $this->v17
+            'paymentOptions' => $this->v17,
+            'actionAdminControllerSetMedia' => true,
         );
 
         parent::__construct();
@@ -70,6 +71,27 @@ class QuickPay extends PaymentModule
         if (!$this->v15) {
             $this->warning = $this->l('This module only works for PrestaShop 1.5, 1.6 and 1.7');
         }
+    }
+
+    /**
+     * Check if cart currency is accepted by this module
+     *
+     * @param Cart $cart
+     * @return bool
+     */
+    public function checkCurrency($cart)
+    {
+        $currency_order = new Currency((int)$cart->id_currency);
+        $currencies_module = $this->getCurrency((int)$cart->id_currency);
+
+        if (is_array($currencies_module)) {
+            foreach ($currencies_module as $currency_module) {
+                if ($currency_order->id == $currency_module['id_currency']) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public function varsObj($setup_var)
@@ -148,6 +170,10 @@ class QuickPay extends PaymentModule
 
     public function getSetup()
     {
+        $cacheKey = 'quickpay_setup_'.$this->context->shop->id; 
+        if (Cache::isStored($cacheKey)) {
+            return Cache::retrieve($cacheKey);
+        }
         $this->setup_vars = array(
             array('_QUICKPAY_MERCHANT_ID', 'merchant_id',
                 sprintf($this->l('%s merchant ID'), 'QuickPay'), '', ''),
@@ -321,7 +347,9 @@ class QuickPay extends PaymentModule
             }
         }
         // $this->dump($this->setup->card_type_locks);
-        return $this->setup;
+        //return $this->setup;
+        Cache::store($cacheKey, $this->setup); 
+        return $this->setup; 
     }
 
     public function sortSetup()
@@ -401,8 +429,16 @@ class QuickPay extends PaymentModule
 
     public function displayPrice($amount, $currency)
     {
-        $locale = $this->context->getCurrentLocale();
-        return $locale->formatPrice($amount, $currency->iso_code);
+        
+        ///$locale = $this->context->getCurrentLocale();
+        if (method_exists($this->context, 'getCurrentLocale')) {
+            // newer version
+            return $this->context->getCurrentLocale()->formatPrice($amount, $currency->iso_code);
+        } else {
+            // fallback for PS 1.6
+            return Tools::displayPrice($amount, $currency->iso_code);
+        }
+        //return $locale->formatPrice($amount, $currency->iso_code);
     }
 
     public function addLog($message, $severity = 1, $error_code = null, $object_type = null, $object_id = null)
@@ -457,7 +493,7 @@ class QuickPay extends PaymentModule
     public function updateCardsPosition()
     {
         $cards = Tools::getValue('cards');
-        if ($cards) {
+        if (is_array($cards)) {
             Configuration::updateValue('_QUICKPAY_ORDERING', implode(',', $cards));
         }
     }
@@ -1531,8 +1567,43 @@ class QuickPay extends PaymentModule
 
     public function hookPaymentOptions($params)
     {
+        error_log('QuickPay: hookPaymentOptions called');
+
+        // Validate cart exists
+        if (!isset($params['cart']) || !Validate::isLoadedObject($params['cart'])) {
+            error_log('QuickPay: Invalid cart in hookPaymentOptions');
+            return array();
+        }
+
+        $cart = $params['cart'];
+        error_log('QuickPay: Processing cart ID: ' . $cart->id);
+
+        // Check currency
+        if (!$this->checkCurrency($cart)) {
+            error_log('QuickPay: Currency check failed for cart ' . $cart->id);
+            return array();
+        }
+
+        // Check if module is active
+        if (!$this->active) {
+            error_log('QuickPay: Module not active');
+            return array();
+        }
+
+        // Check configuration
+        $setup = $this->getSetup();
+        if (empty($setup->merchant_id) || empty($setup->user_key)) {
+            error_log('QuickPay: Missing API credentials');
+            return array();
+        }
+
+        error_log('QuickPay: All checks passed, generating payment options');
+
         $paymentOptions = array();
         $this->makePayment($params, $paymentOptions);
+
+        error_log('QuickPay: Generated ' . count($paymentOptions) . ' payment options');
+
         return $paymentOptions;
     }
 
@@ -1559,11 +1630,6 @@ class QuickPay extends PaymentModule
             return $this->display(__FILE__, 'views/templates/hook/leftlogo.tpl');
         }
         return '';
-    }
-
-    public function hookRightColumn()
-    {
-        return $this->hookDisplayLeftColumn();
     }
 
     public function hookDisplayFooter()
@@ -1639,7 +1705,7 @@ class QuickPay extends PaymentModule
         $trans = Db::getInstance()->getRow(
             'SELECT *
             FROM '._DB_PREFIX_.'quickpay_execution
-            WHERE `id_cart` = '.$order->id_cart.'
+            WHERE `id_cart` = '.(int)$order->id_cart.'
             ORDER BY `id_cart` ASC'
         );
         $json = $trans['json'];
@@ -1650,6 +1716,15 @@ class QuickPay extends PaymentModule
             $this->context->customer->mylogout();
         }
         return $this->display(__FILE__, 'views/templates/hook/confirmation.tpl');
+    }
+
+    public function hookActionAdminControllerSetMedia($params)
+    {
+        // Only load this on the order page
+        $controller = Tools::getValue('controller');
+        if ($controller === 'AdminOrders') {
+            $this->context->controller->addCSS($this->_path.'views/css/admin.css');
+        }
     }
 
     public function hookDisplayAdminOrderSide($params)
@@ -1673,7 +1748,7 @@ class QuickPay extends PaymentModule
         $trans = Db::getInstance()->getRow(
             'SELECT *
             FROM '._DB_PREFIX_.'quickpay_execution
-            WHERE `id_cart` = '.$order->id_cart.'
+            WHERE `id_cart` = '.(int)$order->id_cart.'
             ORDER BY `exec_id` ASC'
         );
         if ($trans) {
@@ -1825,15 +1900,49 @@ class QuickPay extends PaymentModule
             if (empty($vars->metadata->fraud_remarks)) {
                 $vars->metadata->fraud_remarks[] = $this->l('Suspicious payment');
             }
-            $html .= '<tr><th>';
-            $html .= $this->l('Fraud:');
-            $html .= '</th><td class="alert-danger">';
-            $html .= implode(
-                '</td></tr><tr><td></td><td class="alert-danger">',
-                $vars->metadata->fraud_remarks
-            );
-            $html .= '</td></tr>';
+
+            $fraud_json = json_encode(implode(', ', $vars->metadata->fraud_remarks));
+
+            $html .= '
+            <tr>
+                <th>'.$this->l('Fraud:').'</th>
+                <td class="alert-danger">
+                    <button id="showFraudRemarks" class="btn btn-primary btn-sm" style="margin-bottom:5px;">
+                        '.$this->l('Show Remarks').'
+                    </button>
+                    <table id="fraudRemarksTable" style="display:none; margin-top:5px; width:100%;">
+                        <tr>
+                            <td class="alert alert-danger" style="padding:8px; border-radius:5px;"></td>
+                        </tr>
+                    </table>
+
+                    <script>
+                        (function() {
+                            const remarks = '.$fraud_json.';
+                            const btn = document.getElementById("showFraudRemarks");
+                            const table = document.getElementById("fraudRemarksTable");
+                            const cell = table.querySelector("td");
+                            let visible = false;
+
+                            btn.addEventListener("click", function() {
+                                visible = !visible;
+                                if (visible) {
+                                    cell.textContent = remarks || "No remarks found";
+                                    table.style.display = "table";
+                                    btn.textContent = "Hide Remarks";
+                                } else {
+                                    table.style.display = "none";
+                                    btn.textContent = "Show Remarks";
+                                }
+                            });
+                        })();
+                    </script>
+                </td>
+            </tr>';
         }
+
+
+
 
         $html .= '</tbody>';
         $html .= '</table><br />';
@@ -1967,6 +2076,7 @@ class QuickPay extends PaymentModule
 
     public function hookDisplayAdminOrder($params)
     {
+        //return $this->hookDisplayAdminOrderSide($params);
         if ($this->v177) {
             return '';
         } else {
@@ -1981,7 +2091,7 @@ class QuickPay extends PaymentModule
         $trans = Db::getInstance()->getRow(
             'SELECT *
             FROM '._DB_PREFIX_.'quickpay_execution
-            WHERE `id_cart` = '.$order->id_cart.'
+            WHERE `id_cart` = '.(int)$order->id_cart.'
             ORDER BY `exec_id` ASC'
         );
         if (isset($trans['trans_id'])) {
@@ -2017,10 +2127,10 @@ class QuickPay extends PaymentModule
             $trans = Db::getInstance()->getRow(
                 'SELECT *
                 FROM '._DB_PREFIX_.'quickpay_execution
-                WHERE `id_cart` = '.$order->id_cart.'
+                WHERE `id_cart` = '.(int)$order->id_cart.'
                 ORDER BY `exec_id` ASC'
             );
-            if ($trans) {
+            if ($trans) { 
                 $vars = $this->jsonDecode($trans['json']);
                 $amount = $this->getAmount($vars);
                 $callbackurl = $this->getModuleLink('validation');
@@ -2041,11 +2151,6 @@ class QuickPay extends PaymentModule
         }
     }
 
-    public function hookDisplayShoppingCart($params)
-    {
-        return '';
-    }
-
     public function sign($data, $key)
     {
         return call_user_func('hash_hmac', 'sha256', $data, $key);
@@ -2058,15 +2163,62 @@ class QuickPay extends PaymentModule
 
     public function payment()
     {
+        // Debug logging
+        error_log('====================================');
+        error_log('QuickPay payment() method called');
+        error_log('Request URI: ' . $_SERVER['REQUEST_URI']);
+
         if (file_exists($this->local_path.'/customer_function.php')) {
             include_once($this->local_path.'/customer_function.php');
         }
         $setup = $this->getSetup();
+
+        // Check configuration
+        if (empty($setup->merchant_id)) {
+            error_log('QuickPay ERROR: Merchant ID not configured');
+            die('QuickPay Error: Please configure Merchant ID in module settings');
+        }
+        if (empty($setup->user_key)) {
+            error_log('QuickPay ERROR: User Key not configured');
+            die('QuickPay Error: Please configure User Key in module settings');
+        }
+
+        error_log('QuickPay: Configuration OK - Merchant ID: ' . $setup->merchant_id);
+
         $fields = array();
         $id_option = Tools::getValue('option');
         $order_id = Tools::getValue('order_id');
+
+        error_log('QuickPay: option = ' . ($id_option ? $id_option : 'EMPTY'));
+        error_log('QuickPay: order_id = ' . ($order_id ? $order_id : 'EMPTY'));
+
+        // Validate order_id
+        if (empty($order_id)) {
+            error_log('QuickPay ERROR: order_id parameter is missing!');
+            error_log('QuickPay: Redirecting to history page');
+            Tools::redirect('index.php?controller=history');
+            return;
+        }
+
         $id_cart = (int)Tools::substr($order_id, 3);
+
+        error_log('QuickPay: Extracted cart ID = ' . $id_cart);
+
+        if (!$id_cart || $id_cart <= 0) {
+            error_log('QuickPay ERROR: Invalid cart ID: ' . $id_cart);
+            Tools::redirect('index.php?controller=history');
+            return;
+        }
+
         $cart = new Cart($id_cart);
+
+        if (!Validate::isLoadedObject($cart)) {
+            error_log('QuickPay ERROR: Cart not found: ' . $id_cart);
+            Tools::redirect('index.php?controller=history');
+            return;
+        }
+
+        error_log('QuickPay: Cart loaded successfully - Total: ' . $cart->getOrderTotal());
         if ($id_option) {
             $params = array('cart' => $cart);
             $paymentOptions = array();
@@ -2075,7 +2227,8 @@ class QuickPay extends PaymentModule
                 $fields[] = $sfield['name'].'='.urlencode($sfield['value']);
             }
         } else {
-            foreach ($_POST as $k => $v) {
+            $post_data = Tools::getAllValues();
+            foreach ($post_data as $k => $v) {
                 if ($v != '') {
                     $fields[] = $k.'='.urlencode($v);
                 }
@@ -2186,7 +2339,7 @@ class QuickPay extends PaymentModule
         Db::getInstance()->Execute(
             'DELETE
             FROM '._DB_PREFIX_.'quickpay_execution
-            WHERE `id_cart` = '.$id_cart
+            WHERE `id_cart` = '.(int)$id_cart
         );
         $json = $this->doCurl('payments', $fields);
         $vars = $saved_vars = $this->jsonDecode($json);
@@ -2302,7 +2455,7 @@ class QuickPay extends PaymentModule
                 'SELECT `id_address`
                 FROM '._DB_PREFIX_.'address
                 WHERE `alias` = "'.$alias.'"
-                AND `id_customer` = "'.$customer->id.'"'
+                AND `id_customer` = "'.(int)$customer->id.'"'
             );
             if ($row) {
                 $address = new Address($row['id_address']);
@@ -2342,7 +2495,7 @@ class QuickPay extends PaymentModule
                 'SELECT `id_address`
                 FROM '._DB_PREFIX_.'address
                 WHERE `alias` = "'.$alias.'"
-                AND `id_customer` = "'.$customer->id.'"'
+                AND `id_customer` = "'.(int)$customer->id.'"'
             );
             if ($row) {
                 $address = new Address($row['id_address']);
@@ -2469,7 +2622,7 @@ class QuickPay extends PaymentModule
         $trans = Db::getInstance()->getRow(
             'SELECT *
             FROM '._DB_PREFIX_.'quickpay_execution
-            WHERE `id_cart` = '.$id_cart.'
+            WHERE `id_cart` = '.(int)$id_cart.'
             ORDER BY `exec_id` ASC'
         );
         if ($trans['accepted']) {
@@ -2478,7 +2631,7 @@ class QuickPay extends PaymentModule
         Db::getInstance()->Execute(
             'DELETE
             FROM '._DB_PREFIX_.'quickpay_execution
-            WHERE `id_cart` = '.$cart->id
+            WHERE `id_cart` = '.(int)$cart->id
         );
         $values = array(
                 $cart->id, $vars->id, $vars->order_id, $accepted,
@@ -2534,7 +2687,7 @@ class QuickPay extends PaymentModule
                 Db::getInstance()->Execute(
                     'UPDATE '._DB_PREFIX_.'quickpay_execution
                     SET `accepted` = 0
-                    WHERE `id_cart` = '.$id_cart
+                    WHERE `id_cart` = '.(int)$id_cart
                 );
                 $msg = 'QuickPay: Validate error. Exception ';
                 $msg .= $exception->getMessage();
