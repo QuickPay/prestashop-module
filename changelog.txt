@@ -298,8 +298,11 @@ Fixes for PrestaShop 9
 Version 4.3.1
 More fixes for PrestaShop 9
 
-4.4.0
-Hardend module security
-Hardend input handling
+4.3.2
+Hardend module security against cross site scripting attacks
+Hardend input handling to prevent skipping validation
 Refactored sections using deprecated php features
-Performed code quality & maintenance passes
+Implemented caching to prevent performance bottleneck
+Performed code quality & maintenance to enforce PSR-12 coding standards
+Removed and properly registered unused hooks
+Restyled the fraud filter warnings
