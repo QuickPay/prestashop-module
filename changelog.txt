@@ -299,10 +299,12 @@ Version 4.3.1
 More fixes for PrestaShop 9
 
 4.3.2
-Hardend module security against cross site scripting attacks
-Hardend input handling to prevent skipping validation
-Refactored sections using deprecated php features
-Implemented caching to prevent performance bottleneck
-Performed code quality & maintenance to enforce PSR-12 coding standards
-Removed and properly registered unused hooks
-Restyled the fraud filter warnings
+Strengthened module security to prevent potential cross-site scripting (XSS) vulnerabilities
+Improved input validation to block malformed or bypassed data submissions
+Refactored legacy code to remove deprecated PHP features and ensure forward compatibility
+Added intelligent caching to eliminate performance bottlenecks under high load
+Enforced PSR-12 coding standards
+Removed unused hooks and properly re-registered essential ones for better stability
+Restyled fraud filter alerts for improved UX
+Fixed an issue that could cause orders to remain unassigned to customers in certain cases
+Updated Quickpay logo
