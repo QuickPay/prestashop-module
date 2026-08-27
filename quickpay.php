@@ -1886,6 +1886,12 @@ class QuickPay extends PaymentModule
         $html .= '</td></tr>';
 
         $html .= '<tr><th>';
+        $html .= $this->l('Cart ID:');
+        $html .= '</th><td>';
+        $html .= (int)$order->id_cart;
+        $html .= '</td></tr>';
+
+        $html .= '<tr><th>';
         $html .= $this->l('Acquirer:');
         $html .= '</th><td>';
         $html .= Tools::ucfirst($vars->acquirer);

@@ -317,3 +317,4 @@ Scoped fraud alert styles so other order page alerts are not affected
 Removed excessive spacing and the redundant QuickPay Manager link on PrestaShop 9
 Added safe fraud remark rendering and Danish fraud remark translations
 Added version-aware guest customer password hashing for PrestaShop 1.7 and later
+Added the PrestaShop cart ID to the QuickPay admin order card

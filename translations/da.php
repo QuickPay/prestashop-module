@@ -111,6 +111,7 @@ $_MODULE['<{quickpay}prestashop>quickpay_d275a4c04f743ace99c2e73509f132f1'] = 'K
 $_MODULE['<{quickpay}prestashop>quickpay_6b75336622cbea726dede81dbb464b0b'] = 'Vis bemærkninger';
 $_MODULE['<{quickpay}prestashop>quickpay_5a9bc44b9ddcefa405bda390ff808eec'] = 'Skjul bemærkninger';
 $_MODULE['<{quickpay}prestashop>quickpay_4ec2c6a0ea07e3e052a642810843ad0a'] = 'Ingen bemærkninger fundet';
+$_MODULE['<{quickpay}prestashop>quickpay_0d698fffffee7ffeb5d468acdf03c71c'] = 'Kurv-ID:';
 $_MODULE['<{quickpay}prestashop>quickpay_2cbfac302a3fa3bb5bcbb943aea85b5e'] = 'kortgebyr';
 $_MODULE['<{quickpay}prestashop>footerlogo_0da8d9a75492046bea7f314521e07cae'] = 'Betalingsmåder';
 $_MODULE['<{quickpay}prestashop>list15_153d890053dbd5ecaa72477f1affd776'] = 'Kortoversigt';
