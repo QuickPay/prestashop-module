@@ -4,10 +4,10 @@ QuickPay adds payment options to your PrestaShop store through the QuickPay gate
 The module installs like any other PrestaShop payment extension and exposes configuration for API credentials, payment methods, and callback handling inside the back office.
 
 ## Supports
-- Prestashop 1.6, 1.7 & 8.x with PHP 7.2+
+- PrestaShop 1.6, 1.7, 8.x and 9.x
 
 ## Requirements
-- PrestaShop 1.6, 1.7 or 8 with PHP 7.2+
+- PrestaShop 1.6, 1.7 or 8 with PHP 7.2+, or PrestaShop 9 with PHP 8.1+
 - Active QuickPay merchant account with API key and agreement ID
 - TLS 1.2 support on the hosting environment for secure callbacks
 

@@ -308,3 +308,12 @@ Removed unused hooks and properly re-registered essential ones for better stabil
 Restyled fraud filter alerts for improved UX
 Fixed an issue that could cause orders to remain unassigned to customers in certain cases
 Updated Quickpay logo
+
+Version 4.3.3
+Improved the PrestaShop 9 admin order card with a compact native layout
+Constrained the QuickPay logo to 32 x 32 pixels in the PrestaShop 9 order view
+Updated capture, refund, cancel and fraud remark controls for PrestaShop 9
+Scoped fraud alert styles so other order page alerts are not affected
+Removed excessive spacing and the redundant QuickPay Manager link on PrestaShop 9
+Added safe fraud remark rendering and Danish fraud remark translations
+Added version-aware guest customer password hashing for PrestaShop 1.7 and later
