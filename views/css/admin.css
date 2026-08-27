@@ -1,8 +1,80 @@
-.adminorders .alert-danger {
+.adminorders .quickpay-fraud-cell.alert-danger {
     background: none;
     border: none;
     width: 62%;
 }
-body.adminorders .alert-danger::before {
+body.adminorders .quickpay-fraud-cell.alert-danger::before {
   display: none !important;
+}
+
+.quickpay-admin-card .quickpay-admin-title {
+  align-items: center;
+  display: flex;
+  font-size: 1rem;
+  font-weight: 600;
+  gap: .5rem;
+  line-height: 1.2;
+}
+
+.quickpay-admin-card .quickpay-admin-logo {
+  display: block !important;
+  flex: 0 0 32px !important;
+  height: 32px !important;
+  max-height: 32px !important;
+  max-width: 32px !important;
+  object-fit: contain !important;
+  width: 32px !important;
+}
+
+.quickpay-admin-card .card-header {
+  padding: .5rem .75rem !important;
+}
+
+.quickpay-admin-card .card-body {
+  padding: .75rem !important;
+}
+
+.quickpay-admin-card .quickpay-details {
+  margin: 0 0 .625rem !important;
+}
+
+.quickpay-admin-card .quickpay-details > tbody > tr > th,
+.quickpay-admin-card .quickpay-details > tbody > tr > td {
+  border: 0 !important;
+  border-bottom: 1px solid #eee !important;
+  line-height: 1.2 !important;
+  padding: .25rem .375rem .25rem 0 !important;
+  vertical-align: middle !important;
+}
+
+.quickpay-admin-card .quickpay-details > tbody > tr > th {
+  width: 45%;
+}
+
+.quickpay-admin-card .quickpay-operations-table {
+  margin: 0 0 .625rem !important;
+}
+
+.quickpay-admin-card .quickpay-operations-table > thead > tr > th,
+.quickpay-admin-card .quickpay-operations-table > tbody > tr > td {
+  line-height: 1.2 !important;
+  padding: .3rem .375rem !important;
+}
+
+.quickpay-admin-card .quickpay-action-form {
+  margin: .5rem 0 0 !important;
+}
+
+.quickpay-admin-card .quickpay-action-form .form-control-label {
+  margin-bottom: .25rem !important;
+}
+
+.quickpay-admin-card .quickpay-cancel-button {
+  align-items: center;
+  display: inline-flex;
+  gap: .35rem;
+}
+
+.quickpay-admin-card .quickpay-cancel-button .material-icons {
+  font-size: 1rem;
 }
