@@ -1766,7 +1766,14 @@ class QuickPay extends PaymentModule
             $trans_id = $vars->id;
             $order_id = $vars->order_id;
         }
-        if ($this->v177) {
+        if ($this->v9) {
+            $html = '<div class="card quickpay-admin-card"><div class="card-header">
+                <div class="quickpay-admin-title">
+                    <img class="quickpay-admin-logo" src="'.$this->_path.'logo.png" alt="QuickPay" width="32" height="32" style="display:block!important;flex:0 0 32px!important;height:32px!important;max-height:32px!important;max-width:32px!important;object-fit:contain!important;width:32px!important" />
+                    <span>QuickPay</span>
+                </div></div>
+                <div class="card-body">';
+        } elseif ($this->v177) {
             $html = '<div class="card"><div class="card-header">
                 <h3><img src="'.$this->_path.'logo.png" />
                 QuickPay</h3></div>
@@ -1820,12 +1827,20 @@ class QuickPay extends PaymentModule
             $vars = $this->jsonDecode($action_data);
             if (isset($vars) && isset($vars->errors) && get_object_vars($vars->errors)) {
                 if (isset($vars->errors->amount) && $vars->errors->amount[0] == 'is too large') {
-                    $html .= '<p class="error alert-danger">'.$this->l('Amount is too large').'</p>';
+                    if ($this->v9) {
+                        $html .= '<div class="alert alert-danger" role="alert">'.
+                            $this->l('Amount is too large').'</div>';
+                    } else {
+                        $html .= '<p class="error alert-danger">'.$this->l('Amount is too large').'</p>';
+                    }
                 } else {
                     $html .= '<pre>'.print_r($this->jsonDecode($action_data), true).'</pre>';
                 }
             } elseif (isset($vars) && isset($vars->message)) {
-                $html .= '<p class="error alert-danger">'.$vars->message.'</p>';
+                $message = htmlspecialchars($vars->message, ENT_QUOTES, 'UTF-8');
+                $html .= $this->v9 ?
+                    '<div class="alert alert-danger" role="alert">'.$message.'</div>' :
+                    '<p class="error alert-danger">'.$message.'</p>';
             }
         }
 
@@ -1851,7 +1866,9 @@ class QuickPay extends PaymentModule
             return $html;
         }
 
-        $html .= '<table>';
+        $html .= $this->v9 ?
+            '<table class="table table-sm table-borderless quickpay-details">' :
+            '<table>';
         $html .= '<tbody>';
         $html .= '<tr><th style="padding-right:10px">';
         $html .= 'QuickPay '.$this->l('order ID:');
@@ -1901,57 +1918,67 @@ class QuickPay extends PaymentModule
                 $vars->metadata->fraud_remarks[] = $this->l('Suspicious payment');
             }
 
-            $fraud_json = json_encode(implode(', ', $vars->metadata->fraud_remarks));
+            $json_flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+            $fraud_json = json_encode(implode(', ', $vars->metadata->fraud_remarks), $json_flags);
+            $show_json = json_encode($this->l('Show Remarks'), $json_flags);
+            $hide_json = json_encode($this->l('Hide Remarks'), $json_flags);
+            $empty_json = json_encode($this->l('No remarks found'), $json_flags);
+            $fraud_id = 'quickpay-fraud-'.preg_replace('/[^a-zA-Z0-9_-]/', '-', (string)$trans_id);
 
-            $html .= '
-            <tr>
-                <th>'.$this->l('Fraud:').'</th>
-                <td class="alert-danger">
-                    <button id="showFraudRemarks" class="btn btn-primary btn-sm" style="margin-bottom:5px;">
+            if ($this->v9) {
+                $html .= '<tr><th>'.$this->l('Fraud:').'</th><td>
+                    <button type="button" id="'.$fraud_id.'-button" class="btn btn-outline-danger btn-sm" aria-expanded="false" aria-controls="'.$fraud_id.'-remarks">
                         '.$this->l('Show Remarks').'
                     </button>
-                    <table id="fraudRemarksTable" style="display:none; margin-top:5px; width:100%;">
-                        <tr>
-                            <td class="alert alert-danger" style="padding:8px; border-radius:5px;"></td>
-                        </tr>
-                    </table>
+                    <div id="'.$fraud_id.'-remarks" class="alert alert-danger mt-2 mb-0" role="alert" hidden></div>
+                </td></tr>';
+            } else {
+                $html .= '<tr><th>'.$this->l('Fraud:').'</th><td class="quickpay-fraud-cell alert-danger">
+                    <button type="button" id="'.$fraud_id.'-button" class="btn btn-primary btn-sm" style="margin-bottom:5px;">
+                        '.$this->l('Show Remarks').'
+                    </button>
+                    <div id="'.$fraud_id.'-remarks" class="alert alert-danger" style="display:none; margin-top:5px; padding:8px;"></div>
+                </td></tr>';
+            }
 
-                    <script>
-                        (function() {
-                            const remarks = '.$fraud_json.';
-                            const btn = document.getElementById("showFraudRemarks");
-                            const table = document.getElementById("fraudRemarksTable");
-                            const cell = table.querySelector("td");
-                            let visible = false;
-
-                            btn.addEventListener("click", function() {
-                                visible = !visible;
-                                if (visible) {
-                                    cell.textContent = remarks || "No remarks found";
-                                    table.style.display = "table";
-                                    btn.textContent = "Hide Remarks";
-                                } else {
-                                    table.style.display = "none";
-                                    btn.textContent = "Show Remarks";
-                                }
-                            });
-                        })();
-                    </script>
-                </td>
-            </tr>';
+            $html .= '<script>
+                (function() {
+                    var remarks = '.$fraud_json.';
+                    var showLabel = '.$show_json.';
+                    var hideLabel = '.$hide_json.';
+                    var emptyLabel = '.$empty_json.';
+                    var button = document.getElementById("'.$fraud_id.'-button");
+                    var panel = document.getElementById("'.$fraud_id.'-remarks");
+                    if (!button || !panel) {
+                        return;
+                    }
+                    button.addEventListener("click", function() {
+                        var visible = button.getAttribute("aria-expanded") === "true";
+                        button.setAttribute("aria-expanded", visible ? "false" : "true");
+                        button.textContent = visible ? showLabel : hideLabel;
+                        panel.textContent = remarks || emptyLabel;
+                        if ("hidden" in panel) {
+                            panel.hidden = visible;
+                        }
+                        panel.style.display = visible ? "none" : "block";
+                    });
+                })();
+            </script>';
         }
 
 
 
 
         $html .= '</tbody>';
-        $html .= '</table><br />';
+        $html .= $this->v9 ? '</table>' : '</table><br />';
 
         if (Tools::getValue('qpDebug')) {
             $html .= '<pre>'.print_r($this->jsonDecode($status_data), true).'</pre>';
         }
         // $html .= '<pre>'.print_r($_POST, true).'</pre>';
-        $html .= '<table class="table">';
+        $html .= $this->v9 ?
+            '<table class="table table-sm quickpay-operations-table">' :
+            '<table class="table">';
         $html .= '<thead>';
         $html .= '<tr><th>';
         $html .= $this->l('Date');
@@ -2030,42 +2057,74 @@ class QuickPay extends PaymentModule
         $url = 'index.php?controller='.Tools::getValue('controller');
         $url .= '&id_order='.Tools::getValue('id_order');
         $url .= '&vieworder&token='.Tools::getValue('token');
-        $html .= '<br /><br />';
+        if (!$this->v9) {
+            $html .= '<br /><br />';
+        }
         if ($resttocap > 0) {
             $resttocap = $this->toUserAmount($resttocap, $currency);
-            $html .= '<form action="'.$url.'" method="post" name="capture-cancel">';
+            $html .= '<form action="'.$url.'" method="post" name="capture-cancel"'.
+                ($this->v9 ? ' class="quickpay-action-form"' : '').'>';
             $html .= '<input type="hidden" name="qp_count" value="'.$qp_count.'" />';
-            $html .= '<b>'.$this->l('Amount to capture:').'</b>';
-            $html .= '<div>
-                <input style="width:auto;display:inline" type="text" name="acramount" value="'.$resttocap.'"/>
-                <input type="submit" class="button" name="qpcapture" value="'.
-                $this->l('Capture').'" onclick="return confirm(\''.
-                $this->l('Are you sure you want to capture the amount?').'\')"/></div><br />';
+            if ($this->v9) {
+                $html .= '<label class="form-control-label" for="quickpay-capture-amount">'.$this->l('Amount to capture:').'</label>
+                    <div class="input-group input-group-sm">
+                        <input id="quickpay-capture-amount" class="form-control" type="text" name="acramount" value="'.$resttocap.'" />
+                        <button type="submit" class="btn btn-primary" name="qpcapture" onclick="return confirm(\''.
+                            $this->l('Are you sure you want to capture the amount?').'\')">'.$this->l('Capture').'</button>
+                    </div>';
+            } else {
+                $html .= '<b>'.$this->l('Amount to capture:').'</b>';
+                $html .= '<div>
+                    <input style="width:auto;display:inline" type="text" name="acramount" value="'.$resttocap.'"/>
+                    <input type="submit" class="button" name="qpcapture" value="'.
+                    $this->l('Capture').'" onclick="return confirm(\''.
+                    $this->l('Are you sure you want to capture the amount?').'\')"/></div><br />';
+            }
             $html .= '</form>';
         }
         if ($resttoref > 0) {
             $resttoref = $this->toUserAmount($resttoref, $currency);
-            $html .= '<form action="'.$url.'" method="post" name="capture-cancel">';
+            $html .= '<form action="'.$url.'" method="post" name="capture-cancel"'.
+                ($this->v9 ? ' class="quickpay-action-form"' : '').'>';
             $html .= '<input type="hidden" name="qp_count" value="'.$qp_count.'" />';
-            $html .= '<b>'.$this->l('Amount to refund').' ('.$resttoref.'):</b>';
-            $html .= '<div>
-                <input style="width:auto;display:inline" type="text" name="acramountref" id="acramountref" value="" />
-                <input type="submit" class="button" name="qprefund" value="'.
-                $this->l('Refund').'" onclick="return confirm(\''.
-                $this->l('Are you sure you want to refund the amount?').'\');"/></div><br />';
+            if ($this->v9) {
+                $html .= '<label class="form-control-label" for="acramountref">'.$this->l('Amount to refund').' ('.$resttoref.'):</label>
+                    <div class="input-group input-group-sm">
+                        <input class="form-control" type="text" name="acramountref" id="acramountref" value="" />
+                        <button type="submit" class="btn btn-primary" name="qprefund" onclick="return confirm(\''.
+                            $this->l('Are you sure you want to refund the amount?').'\')">'.$this->l('Refund').'</button>
+                    </div>';
+            } else {
+                $html .= '<b>'.$this->l('Amount to refund').' ('.$resttoref.'):</b>';
+                $html .= '<div>
+                    <input style="width:auto;display:inline" type="text" name="acramountref" id="acramountref" value="" />
+                    <input type="submit" class="button" name="qprefund" value="'.
+                    $this->l('Refund').'" onclick="return confirm(\''.
+                    $this->l('Are you sure you want to refund the amount?').'\');"/></div><br />';
+            }
             $html .= '</form>';
         }
         if ($allowcancel) {
-            $html .= '<form action="'.$url.'" method="post" name="capture-cancel">';
+            $html .= '<form action="'.$url.'" method="post" name="capture-cancel"'.
+                ($this->v9 ? ' class="quickpay-action-form"' : '').'>';
             $html .= '<input type="hidden" name="qp_count" value="'.$qp_count.'" />';
-            $html .= '<input type="submit" name="qpcancel" value="';
-            $html .= $this->l('Cancel the transaction!');
-            $html .= '" class="button" onclick="return confirm(\'';
-                    $html .= $this->l('Are you sure you want cancel the transaction?').'\')"/></center>';
-            $html .= '</form><br />';
+            if ($this->v9) {
+                $html .= '<button type="submit" name="qpcancel" class="btn btn-outline-danger btn-sm quickpay-cancel-button" onclick="return confirm(\''.
+                    $this->l('Are you sure you want cancel the transaction?').'\')">
+                    <i class="material-icons" aria-hidden="true">block</i>'.
+                    rtrim($this->l('Cancel the transaction!'), '!').'</button>';
+            } else {
+                $html .= '<input type="submit" name="qpcancel" value="';
+                $html .= $this->l('Cancel the transaction!');
+                $html .= '" class="button" onclick="return confirm(\'';
+                $html .= $this->l('Are you sure you want cancel the transaction?').'\')"/></center>';
+            }
+            $html .= $this->v9 ? '</form>' : '</form><br />';
         }
-        $html .= '<a href="https://manage.quickpay.net" target="_blank" style="color: blue;">'.
-            sprintf($this->l('%s manager'), 'QuickPay').'</a>';
+        if (!$this->v9) {
+            $html .= '<a href="https://manage.quickpay.net" target="_blank" style="color: blue;">'.
+                sprintf($this->l('%s manager'), 'QuickPay').'</a>';
+        }
         if ($this->v16) {
             $html .= '</div></div>';
         } else {
@@ -2431,7 +2490,8 @@ class QuickPay extends PaymentModule
                 $name = explode(' ', trim($vars->invoice_address->name));
                 $customer->lastname = array_pop($name);
                 $customer->firstname = implode(' ', $name);
-                $customer->passwd = Tools::encrypt(Tools::passwdGen(MIN_PASSWD_LENGTH, 'RANDOM'));
+                $password = Tools::passwdGen(MIN_PASSWD_LENGTH, 'RANDOM');
+                $customer->passwd = $this->v17 ? Tools::hash($password) : Tools::encrypt($password);
                 $customer->is_guest = true;
                 $customer->add();
             }
